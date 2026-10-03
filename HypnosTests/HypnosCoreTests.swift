@@ -31,6 +31,21 @@ private final class ControlledClient: HypnosTranscribing {
 final class HypnosCoreTests: XCTestCase {
     private let exact = " \n# Hypnos [keep this]\n\n- Tushar — नमस्ते 👋\n\n```swift\nlet café = \"[yes]\"\n  print(café)\n```\n\nTrailing spaces  \n"
 
+    func testSetupBlockersAndHotkeyReadiness() throws {
+        var ready = HypnosReadiness(deviceKeyConfigured: true, microphoneGranted: true,
+                                    accessibilityGranted: true, hotkeyInstalled: true)
+        XCTAssertNil(ready.recordingBlocker)
+        ready.microphoneGranted = false
+        XCTAssertTrue(try XCTUnwrap(ready.recordingBlocker).contains("Microphone"))
+        ready.microphoneGranted = true; ready.accessibilityGranted = false
+        XCTAssertTrue(try XCTUnwrap(ready.recordingBlocker).contains("Accessibility"))
+        ready.accessibilityGranted = true; ready.deviceKeyConfigured = false
+        XCTAssertTrue(try XCTUnwrap(ready.recordingBlocker).contains("Device key"))
+        ready.deviceKeyConfigured = true; ready.hotkeyInstalled = false
+        XCTAssertNil(ready.recordingBlocker) // The on-screen Record button still works.
+        XCTAssertTrue(ready.hotkeyStatus.contains("Not active"))
+    }
+
     func testMultipartOnlyApprovedFieldsAndBearerAuthentication() throws {
         let audio = Data(repeating: 65, count: 100)
         let (request, body) = try HypnosClient.request(audio: audio, configuration: HypnosConfiguration(), key: "unit-test-placeholder", boundary: "TestBoundary")

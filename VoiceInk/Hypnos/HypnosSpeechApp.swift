@@ -9,11 +9,11 @@ struct HypnosSpeechApp: App {
 
     var body: some Scene {
         Window("Hypnos Speech", id: "hypnos-settings") {
-            HypnosSettingsView(controller: controller)
-                .frame(minWidth: 640, minHeight: 560)
+            HypnosMainView(controller: controller)
+                .frame(minWidth: AppWindowLayout.width, minHeight: AppWindowLayout.minimumHeight)
         }
-        .defaultSize(width: 700, height: 650)
-        MenuBarExtra("Hypnos Speech", systemImage: controller.recordingState == .recording ? "mic.fill" : "waveform") {
+        .defaultSize(width: AppWindowLayout.width, height: AppWindowLayout.minimumHeight)
+        MenuBarExtra("Hypnos Speech", systemImage: controller.menuBarSymbol) {
             HypnosMenu(controller: controller)
         }
     }
@@ -29,8 +29,15 @@ final class HypnosController: ObservableObject {
     @Published var history: [HypnosRecording] = []
     @Published var hotkeyAvailable = false
     @Published var hasDeviceKey = false
+    @Published var microphoneGranted = false
+    @Published var accessibilityGranted = false
+    @Published var indicatorMessage: String?
+    @Published var shortcutPressCount = 0
     @Published var pushToTalk: Bool {
-        didSet { UserDefaults.standard.set(pushToTalk, forKey: "HypnosPushToTalk") }
+        didSet {
+            UserDefaults.standard.set(pushToTalk, forKey: "HypnosPushToTalk")
+            shortcutMonitor.updateStandaloneModifierActions(pushToTalk ? [] : [.primaryRecording])
+        }
     }
     private var workflow: HypnosWorkflow?
     private var currentRecording: HypnosRecording?
@@ -45,7 +52,23 @@ final class HypnosController: ObservableObject {
     private var pasteTarget: NSRunningApplication?
     private var permissionTimer: Timer?
     private let nativeValidation = HypnosNativeValidation()
+    private var validationTask: Task<String, Error>?
+    private var feedbackTask: Task<Void, Never>?
+    private var readinessSnapshot: Data?
     var busy: Bool { captureTransition || recordingState != .idle || workflow?.isBusy == true }
+    var readiness: HypnosReadiness {
+        HypnosReadiness(deviceKeyConfigured: hasDeviceKey, microphoneGranted: microphoneGranted,
+                        accessibilityGranted: accessibilityGranted, hotkeyInstalled: hotkeyAvailable)
+    }
+    var menuBarSymbol: String {
+        if recordingState == .recording { return "mic.fill" }
+        if busy { return "ellipsis.circle" }
+        return readiness.recordingBlocker == nil && hotkeyAvailable ? "waveform" : "exclamationmark.mic"
+    }
+    var recordButtonTitle: String {
+        if recordingState == .recording { return validationTask != nil ? "Stop Test" : "Stop & Transcribe" }
+        return "Start Recording"
+    }
 
     init() {
         let defaults = UserDefaults.standard
@@ -78,16 +101,21 @@ final class HypnosController: ObservableObject {
         }
         if let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier { lastTarget = app }
         refreshHotkey()
+        if let blocker = readiness.recordingBlocker { status = blocker }
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                if AXIsProcessTrusted() && !self.hotkeyAvailable { self.refreshHotkey() }
+                self.refreshPermissions()
+                if self.accessibilityGranted && !self.hotkeyAvailable { self.refreshHotkey() }
+                self.writeReadiness()
             }
         }
     }
 
     func refreshHotkey() {
-        guard AXIsProcessTrusted() else { hotkeyAvailable = false; return }
+        refreshPermissions()
+        defer { writeReadiness() }
+        guard accessibilityGranted else { shortcutMonitor.stop(); hotkeyAvailable = false; return }
         guard let shortcut = ShortcutStore.shortcut(for: .primaryRecording) else {
             shortcutMonitor.stop()
             hotkeyAvailable = false
@@ -95,9 +123,14 @@ final class HypnosController: ObservableObject {
         }
         hotkeyAvailable = shortcutMonitor.start(
             shortcuts: [.primaryRecording: shortcut],
-            standaloneModifierActions: [.primaryRecording],
+            standaloneModifierActions: pushToTalk ? [] : [.primaryRecording],
             onShortcutDown: { [weak self] _, _ in
-                Task { @MainActor in await self?.toggle() }
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.shortcutPressCount += 1
+                    self.writeReadiness()
+                    await self.toggle()
+                }
             },
             onShortcutUp: { [weak self] _, _ in
                 Task { @MainActor in
@@ -107,6 +140,32 @@ final class HypnosController: ObservableObject {
                 }
             }
         )
+    }
+
+    func refreshPermissions() {
+        microphoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        accessibilityGranted = AXIsProcessTrusted()
+        if !accessibilityGranted && hotkeyAvailable { shortcutMonitor.stop(); hotkeyAvailable = false }
+    }
+
+    // Private diagnostic contains booleans and state only, never a key, transcript, or audio.
+    private func writeReadiness() {
+        let report: [String: Any] = ["microphone_granted": microphoneGranted,
+            "accessibility_granted": accessibilityGranted, "device_key_configured": hasDeviceKey,
+            "hotkey_installed": hotkeyAvailable, "shortcut_presses": shortcutPressCount,
+            "recording_state": String(describing: recordingState)]
+        guard let data = try? JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]),
+              data != readinessSnapshot else { return }
+        do {
+            let fm = FileManager.default
+            let directory = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("space.hypnos.speech.mac/Validation", isDirectory: true)
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            let output = directory.appendingPathComponent("readiness.json")
+            try data.write(to: output, options: .atomic)
+            try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: output.path)
+            readinessSnapshot = data
+        } catch { /* Diagnostic failure must not affect capture. */ }
     }
 
     func saveSettings(key: String) -> Bool {
@@ -126,6 +185,7 @@ final class HypnosController: ObservableObject {
         defaults.set(configuration.profileID, forKey: "HypnosProfileID")
         hasDeviceKey = KeychainService.shared.exists(forKey: Self.keyAccount, syncable: false)
         status = hasDeviceKey ? "Settings saved. Ready for a fresh recording." : HypnosError.missingKey.localizedDescription
+        writeReadiness()
         return true
     }
 
@@ -133,32 +193,40 @@ final class HypnosController: ObservableObject {
         if KeychainService.shared.delete(forKey: Self.keyAccount, syncable: false) {
             hasDeviceKey = false
             status = "Device key removed from this Mac. Revoke it on the server separately if needed."
+            writeReadiness()
         }
     }
 
     func requestMicrophone() async {
         let allowed = await AVCaptureDevice.requestAccess(for: .audio)
-        status = allowed ? "Microphone granted. Grant Accessibility for hotkeys and paste." : "Enable Hypnos Speech in Privacy & Security → Microphone."
+        refreshPermissions()
+        status = allowed ? (readiness.recordingBlocker ?? "Microphone granted. Ready to record.") : "Enable Hypnos Speech in Privacy & Security → Microphone."
+        writeReadiness()
+        if !allowed { openPrivacySettings("Microphone") }
     }
 
     func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
         refreshHotkey()
+        if !accessibilityGranted {
+            status = "Enable Hypnos Speech in Privacy & Security → Accessibility."
+            openPrivacySettings("Accessibility")
+        }
+    }
+
+    func openPrivacySettings(_ permission: String) {
+        guard ["Microphone", "Accessibility"].contains(permission),
+              let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_\(permission)") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     func toggle() async {
+        if validationTask != nil { await cancel(); return }
         if recordingState == .recording { await stopAndSubmit(); return }
         guard !busy, let workflow else { return }
-        guard hasDeviceKey else { status = HypnosError.missingKey.localizedDescription; return }
-        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-            status = "Grant Microphone permission in Settings before recording."
-            return
-        }
-        guard AXIsProcessTrusted() else {
-            status = "Grant Accessibility permission for global hotkeys and paste."
-            return
-        }
+        refreshPermissions()
+        if let blocker = readiness.recordingBlocker { showFeedback(blocker); return }
         let generation = UUID()
         recordingGeneration = generation
         stopWhenStarted = false
@@ -166,6 +234,7 @@ final class HypnosController: ObservableObject {
         defer { captureTransition = false }
         recordingState = .starting
         status = "Starting microphone…"
+        indicatorMessage = nil
         pasteTarget = lastTarget
         showIndicator()
         do {
@@ -178,6 +247,7 @@ final class HypnosController: ObservableObject {
             }
             recordingState = .recording
             status = "Recording — stop to send to Hypnos"
+            writeReadiness()
             if stopWhenStarted { await stopAndSubmit() }
         } catch {
             if var record = currentRecording {
@@ -188,12 +258,13 @@ final class HypnosController: ObservableObject {
             currentRecording = nil
             recordingState = .idle
             status = "Microphone could not start. Check permission and the selected audio device."
-            indicator?.orderOut(nil)
+            showFeedback(status)
             refreshHistory()
         }
     }
 
     func stopAndSubmit() async {
+        if validationTask != nil { await cancel(); return }
         guard recordingState == .recording, let record = currentRecording else { return }
         let generation = recordingGeneration
         recordingState = .transcribing
@@ -213,6 +284,7 @@ final class HypnosController: ObservableObject {
     private func submit(_ record: HypnosRecording) {
         guard let workflow else { return }
         let key = KeychainService.shared.getString(forKey: Self.keyAccount, syncable: false) ?? ""
+        indicatorMessage = nil
         showIndicator()
         workflow.submit(record, configuration: configuration, key: key) { [weak self] text, canceled in
             guard let self, !canceled() else { return false }
@@ -228,6 +300,7 @@ final class HypnosController: ObservableObject {
         recordingGeneration = UUID()
         stopWhenStarted = false
         workflow?.cancel() // Invalidate late delivery before awaiting hardware shutdown.
+        validationTask?.cancel()
         if let record = currentRecording, let workflow {
             currentRecording = nil
             await recorder.stopRecording()
@@ -240,6 +313,7 @@ final class HypnosController: ObservableObject {
         recordingState = .idle
         status = "Canceled — no late response will be pasted"
         indicator?.orderOut(nil)
+        writeReadiness()
         refreshHistory()
     }
 
@@ -252,17 +326,44 @@ final class HypnosController: ObservableObject {
         }
     }
 
-    func runNativeValidation() async {
+    func runNativeValidation(microphoneOnly: Bool = false) async {
         guard !busy else { return }
+        refreshPermissions()
+        guard microphoneGranted && (microphoneOnly || accessibilityGranted) else {
+            showFeedback(microphoneOnly ? "Grant Microphone permission before testing." : "Local validation needs Microphone and Accessibility permissions first.")
+            return
+        }
         captureTransition = true
-        recordingState = .recording
-        status = "Local validation: capturing two seconds of fresh microphone audio. No upload."
+        recordingState = .starting
+        indicatorMessage = nil
+        status = "Starting local microphone test… Nothing will be uploaded."
         showIndicator()
-        do { status = try await nativeValidation.run(recorder: recorder) }
-        catch { await recorder.stopRecording(); status = "Local validation failed; check permissions and audio device." }
+        let onStarted = { [weak self] in
+            self?.recordingState = .recording
+            self?.status = microphoneOnly ? "Microphone test: recording for five seconds. Nothing will be uploaded." : "Local validation: capturing two seconds of fresh microphone audio. No upload."
+        }
+        let onStopped = { [weak self] in
+            self?.recordingState = .busy
+            self?.status = microphoneOnly ? "Checking the captured WAV…" : "Checking native hotkeys and paste… No server upload."
+        }
+        let task = Task { @MainActor in
+            if microphoneOnly {
+                return try await nativeValidation.runMicrophone(recorder: recorder, onStarted: onStarted, onStopped: onStopped)
+            }
+            return try await nativeValidation.run(recorder: recorder, shouldCancel: { [weak self] in
+                self?.validationTask?.isCancelled ?? true
+            }, onStarted: onStarted, onStopped: onStopped)
+        }
+        validationTask = task
+        do { status = try await task.value }
+        catch {
+            await recorder.stopRecording()
+            status = task.isCancelled ? "Local validation canceled." : "Local validation failed: \(error.localizedDescription)"
+        }
+        validationTask = nil
         recordingState = .idle
         captureTransition = false
-        indicator?.orderOut(nil)
+        showFeedback(status)
     }
 
     private func refreshWorkflow() {
@@ -274,7 +375,7 @@ final class HypnosController: ObservableObject {
         case .failed(let message): recordingState = .idle; status = message
         case .canceled: recordingState = .idle; status = "Canceled — recording retained"
         }
-        if !workflow.isBusy && workflow.state != .processing { indicator?.orderOut(nil) }
+        if workflow.state != .idle && workflow.state != .processing { showFeedback(status) }
         refreshHistory()
     }
 
@@ -284,12 +385,25 @@ final class HypnosController: ObservableObject {
     }
 
     private func showIndicator() {
+        feedbackTask?.cancel()
         if indicator == nil {
             let panel = MiniRecorderPanel(contentRect: .zero)
             panel.contentView = NSHostingView(rootView: HypnosIndicator(controller: self))
             indicator = panel
         }
         _ = indicator?.show()
+    }
+
+    private func showFeedback(_ message: String) {
+        status = message
+        indicatorMessage = message
+        showIndicator()
+        writeReadiness()
+        feedbackTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: 6_000_000_000) } catch { return }
+            guard let self, !self.busy else { return }
+            self.indicator?.orderOut(nil)
+        }
     }
 }
 
@@ -299,12 +413,22 @@ private struct HypnosIndicator: View {
         VStack {
             Spacer()
             HStack(spacing: 14) {
-                RecorderStatusDisplay(currentState: controller.recordingState,
-                                      audioMeterProvider: controller.recorder.audioMeterSnapshot)
-                Text(controller.recordingState == .recording ? "Recording" : "Processing")
-                    .font(.system(size: 13, weight: .medium))
-                if controller.recordingState == .recording {
-                    Button("Stop") { Task { await controller.stopAndSubmit() } }
+                if let message = controller.indicatorMessage {
+                    Image(systemName: "info.circle.fill")
+                    Text(message).font(.system(size: 13, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    RecorderStatusDisplay(currentState: controller.recordingState,
+                                          audioMeterProvider: controller.recorder.audioMeterSnapshot)
+                    if controller.recordingState == .recording {
+                        Image(systemName: "record.circle.fill").foregroundStyle(.red)
+                            .symbolEffect(.pulse, options: .repeating)
+                    }
+                    Text(controller.recordingState == .recording ? "Recording" : controller.recordingState == .starting ? "Starting" : "Processing")
+                        .font(.system(size: 13, weight: .medium))
+                    if controller.recordingState == .recording {
+                        Button("Stop") { Task { await controller.stopAndSubmit() } }
+                    }
                 }
                 RecorderCloseButton { Task { await controller.cancel() } }
             }
@@ -322,12 +446,12 @@ private struct HypnosMenu: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Text(controller.status)
-        Button(controller.recordingState == .recording ? "Stop and transcribe" : "Start recording") {
+        Button(controller.recordButtonTitle) {
             Task { await controller.toggle() }
         }.disabled(controller.busy && controller.recordingState != .recording)
         Button("Cancel") { Task { await controller.cancel() } }.disabled(!controller.busy)
         Divider()
-        Button("Settings and recordings…") {
+        Button("Open Hypnos Speech…") {
             openWindow(id: "hypnos-settings")
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -336,87 +460,4 @@ private struct HypnosMenu: View {
     }
 }
 
-private struct HypnosSettingsView: View {
-    @ObservedObject var controller: HypnosController
-    @State private var key = ""
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Hypnos Speech").font(.largeTitle.bold())
-                Text("Hypnos final-output mode").font(.headline)
-                Text("Record here. Hypnos handles transcription, dictionary, snippets, and cleanup. Its final text is saved and pasted exactly. Results arrive after recording stops.")
-                Text(controller.status).foregroundStyle(.secondary).textSelection(.enabled)
-                GroupBox("Connection — keep Tailscale connected") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        TextField("HTTPS transcription endpoint", text: $controller.configuration.endpoint)
-                        TextField("Model", text: $controller.configuration.model)
-                        TextField("Profile ID (optional)", text: $controller.configuration.profileID)
-                        SecureField(controller.hasDeviceKey ? "Replace device key (leave blank to keep)" : "Dedicated speech-only device key", text: $key)
-                            .privacySensitive()
-                            .accessibilityIdentifier("hypnos-device-key")
-                        HStack {
-                            Button("Save settings") { if controller.saveSettings(key: key) { key = "" } }
-                            Link("Create a Mac device key", destination: URL(string: "https://speech.tusharbhardwaj.space/#keys")!)
-                            if controller.hasDeviceKey { Button("Remove saved key") { controller.removeKey() } }
-                        }
-                        Text("The key stays in this app’s macOS Keychain namespace. Only audio and the fields above are sent. Server/provider retention follows your server settings.").font(.caption).foregroundStyle(.secondary)
-                    }.padding(8)
-                }.disabled(controller.busy)
-                GroupBox("Recording and permissions") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("Global hotkey")
-                            ShortcutRecorder(action: .primaryRecording, onShortcutChanged: controller.refreshHotkey)
-                            Toggle("Push to talk", isOn: $controller.pushToTalk)
-                        }
-                        Text(controller.hotkeyAvailable ? "Hotkey active. Toggle: press to start/stop. Push to talk: hold to record." : "Hotkey needs Accessibility permission. Default: Control–Option–Space.")
-                            .font(.caption)
-                        HStack {
-                            Button("Grant Microphone") { Task { await controller.requestMicrophone() } }
-                            Button("Grant Accessibility") { controller.requestAccessibility() }
-                            Button("Refresh hotkey") { controller.refreshHotkey() }
-                            Button("Run local validation") { Task { await controller.runNativeValidation() } }.disabled(controller.busy)
-                        }
-                        Text("Microphone captures your voice. Accessibility enables global hotkeys and Command-V paste. Allow Hypnos Speech in System Settings → Privacy & Security. Screen Recording is not required.").font(.caption).foregroundStyle(.secondary)
-                        HStack {
-                            Button(controller.recordingState == .recording ? "Stop and transcribe" : "Start recording") { Task { await controller.toggle() } }
-                                .disabled(controller.busy && controller.recordingState != .recording)
-                            Button("Cancel") { Task { await controller.cancel() } }.disabled(!controller.busy)
-                        }
-                    }.padding(8)
-                }
-                GroupBox("Retained recordings") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Stored privately on this Mac. Failed or interrupted recordings stay here until you remove them in Finder. Retry makes a new server request and may incur processing again. Saved text can be pasted without uploading again.").font(.caption).foregroundStyle(.secondary)
-                        if controller.history.isEmpty { Text("No recordings yet.").foregroundStyle(.secondary) }
-                        ForEach(controller.history) { record in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(record.createdAt, style: .date)
-                                    Text(record.createdAt, style: .time)
-                                    Text(record.status.rawValue).foregroundStyle(.secondary)
-                                    Spacer()
-                                    if record.status == .failed || record.status == .canceled {
-                                        Button("Retry") { controller.retry(record) }.disabled(controller.busy)
-                                    }
-                                    if record.text != nil {
-                                        Button("Paste saved text") { controller.pasteSaved(record) }.disabled(controller.busy)
-                                    }
-                                }
-                                if let error = record.error { Text(error).font(.caption).foregroundStyle(.secondary) }
-                                if let text = record.text { Text(verbatim: text).textSelection(.enabled).font(.system(.body, design: .monospaced)) }
-                                Divider()
-                            }
-                        }
-                        Button("Show private recordings in Finder") {
-                            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("space.hypnos.speech.mac/Recordings")
-                            NSWorkspace.shared.open(root)
-                        }
-                    }.padding(8)
-                }
-                Text("Based on VoiceInk v2.21 by Pax. GPLv3. Updates: fetch upstream source and rebuild; binary updates are disabled.").font(.caption).foregroundStyle(.secondary)
-            }.padding(24)
-        }
-    }
-}
 #endif

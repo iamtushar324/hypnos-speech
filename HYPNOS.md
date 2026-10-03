@@ -5,15 +5,17 @@ A personal batch capture client based on [VoiceInk](https://github.com/Beingpax/
 ## Setup
 
 1. Use macOS 15+, keep Tailscale connected, and build as described below.
-2. Open `~/Applications/Hypnos Speech.app`. In Settings, confirm the HTTPS endpoint and model.
+2. Open `~/Applications/Hypnos Speech.app`. In **AI Models**, confirm the HTTPS endpoint and model. The app reuses VoiceInk's sidebar, dashboard hero, native theme, and settings controls.
 3. Sign in to `https://speech.tusharbhardwaj.space/#keys`, create a **dedicated Mac speech-only device key**, and enter it directly into the app's **secure device key field**. Save settings. Never put a key in chat, source, screenshots, shell commands, or documentation. Blank replacement input preserves the saved key.
-4. Click **Grant Microphone** and **Grant Accessibility**. In macOS System Settings → Privacy & Security, enable Hypnos Speech for those permissions. Accessibility is used for the hotkey and Command-V paste. Screen Recording permission is not needed.
+4. Use the Dashboard **Set Up** buttons or Settings **Grant Microphone** and **Grant Accessibility**. In macOS System Settings → Privacy & Security, enable Hypnos Speech for those permissions. Accessibility is used for the hotkey and Command-V paste. Screen Recording permission is not needed. The Dashboard shows each blocker; idle/blocked states never claim to be recording.
 5. Default hotkey: **Control–Option–Space**, independent of Handy's right-side modifiers. Press to start/stop. Enable **Push to talk** to hold/release, or record another shortcut using VoiceInk's shortcut recorder. After granting permissions, use **Refresh hotkey** if needed.
 6. Focus a disposable plain-text document and make a short fresh recording. Stop, wait for Hypnos processing, and compare the document against the exact saved text. Never upload existing app history to test this integration.
 
 Default endpoint: `https://speech.tusharbhardwaj.space/v1/audio/transcriptions`. Default model: `whisper-large-v3-turbo`. Profile ID is optional. Language is omitted for automatic detection. Hypnos controls dictionary, snippets, and cleanup.
 
 Microphone recordings are WAV, mono 16 kHz PCM16, using VoiceInk's native Core Audio recorder. Upload begins only after capture has stopped. No partial transcript or streaming recognition is displayed.
+
+The native floating indicator and Dashboard show VoiceInk's audio-reactive waveform and a pulsing red recording mark during capture, a processing animation after stopping, and visible success/failure messages. Silent input can leave the waveform flat; the red mark still indicates active capture. **Test Microphone · no upload** captures five seconds locally without a device key or Accessibility grant. **Run Local Validation** also checks the event tap and exact paste, and requires both macOS permissions.
 
 ## Build and signing
 
@@ -43,6 +45,7 @@ Build output: `.hypnos-native-build/Build/Products/Release/Hypnos Speech.app`. G
 - Data: `~/Library/Application Support/space.hypnos.speech.mac/Recordings/`.
 - Per recording: UUID-named `.wav` and JSON metadata with status, timestamp, safe error, and exact final text. Directories are 0700 and files 0600. This is private on-disk storage, not additional application-level encryption; use macOS/FileVault for disk encryption.
 - No automatic audio/history deletion. Remove selected files explicitly in Finder when desired. Failed, canceled, and interrupted sessions are retained. Launch marks interrupted sessions failed and never uploads them automatically.
+- Local diagnostic recordings/reports live in the adjacent `Validation/` directory with the same private permissions. `microphone.json` records the fresh microphone-only result; `latest.json` records the complete local test. `readiness.json` contains permission/key-presence booleans, state, and shortcut count, never credentials or transcript contents. These files are local and never published.
 
 Only WAV audio, model, `response_format=json`, and optional profile ID are uploaded. No screen, selected text, clipboard, or local dictionary context is sent. The clipboard is used locally for paste/restore. The app keeps only the target application's process identity, not its document contents. Optional server cleanup can send fresh transcript/dictionary context to a configured provider.
 
@@ -59,9 +62,9 @@ Our implementation is additive in `VoiceInk/Hypnos/`, `HypnosSpeech/`, `HypnosTe
 1. `KeychainService.swift`: separate namespace under `HYPNOS_SPEECH`.
 2. `CursorPaster.swift`: optional auto-learn suppression and cancellation guard, with original defaults preserved.
 
-The generator selects native source files and makes small, asserted adapters in ignored build sources: removes local auto-learn, upstream preference migrations, and model-mode lookups, routes shortcut validation alerts locally, and extracts recording indicator widgets. Assertions stop the build if those upstream interfaces change. Upstream files remain intact.
+The generator selects native source files and makes small, asserted adapters in ignored build sources: removes local auto-learn, upstream preference migrations, and model-mode lookups, routes shortcut validation alerts locally, extracts recording indicator widgets/window geometry/navigation types, and adds a truthful Hypnos headline to the original dashboard hero. Assertions stop the build if those upstream interfaces change. Upstream files remain intact.
 
-The Hypnos app bypasses the upstream transcription pipeline entirely; its explicit final-output mode uses a separate tested workflow from response to history to paste. Native CoreAudioRecorder, ShortcutMonitor/ShortcutRecorder, MiniRecorderPanel/RecorderStatusDisplay, KeychainService, and CursorPaster are reused. Settings do not expose upstream model downloads, local cleanup, screen capture, or update controls.
+The Hypnos app bypasses the upstream transcription pipeline entirely; its explicit final-output mode uses a separate tested workflow from response to history to paste. Native CoreAudioRecorder, ShortcutMonitor/ShortcutRecorder, MiniRecorderPanel/RecorderStatusDisplay, KeychainService, and CursorPaster are reused. AppSidebar, DashboardHeroCard, AppTheme, AppCardBackground, AppScreenHeader and native controls come from upstream source. Modes and Dictionary link to Hypnos rather than applying local cleanup. Settings do not expose upstream model downloads, screen capture, or update controls.
 
 Upstream `LOCAL_BUILD` alone does not fully guard the v2.21 updater initializer. Our entry point never constructs it, and our own Info.plist has no Sparkle feed or signing key. Stock upstream binary updates therefore cannot replace this app.
 

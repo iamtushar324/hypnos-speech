@@ -49,6 +49,23 @@ def recorder_components(text):
         parts.append(text[start:end])
     return 'import SwiftUI\n' + '\n'.join(parts)
 
+def window_layout(text):
+    start = text.index('enum AppWindowLayout {')
+    end = text.index('\nenum AppWindowID {', start)
+    return 'import AppKit\n' + text[start:end]
+
+def navigation_types(text):
+    start = text.index('enum ViewType:')
+    end = text.index('\nfinal class MainWindowNavigation:', start)
+    return 'import SwiftUI\n' + replace_once(text[start:end], '"VoiceInk Pro"', '"About Hypnos"')
+
+def hero_card(text):
+    text = replace_once(text, '    case calculatingProgress', '    case hypnos\n    case calculatingProgress')
+    return replace_once(text, '        case .calculatingProgress:', '''        case .hypnos:
+            highlightedValue = "Hypnos Speech"
+            text = AttributedString("Your voice, ready for \\(highlightedValue).")
+        case .calculatingProgress:''')
+
 sources = [
     'VoiceInk/Infrastructure/Audio/CoreAudioRecorder.swift',
     'VoiceInk/Infrastructure/Credentials/KeychainService.swift',
@@ -63,6 +80,16 @@ sources = [
     'VoiceInk/Features/Recording/Presentation/RecorderScreenResolver.swift',
     'VoiceInk/Core/Recording/RecordingState.swift',
     'VoiceInk/DesignSystem/Theme/AppTheme.swift',
+    'VoiceInk/App/Navigation/AppSidebar.swift',
+    'VoiceInk/DesignSystem/Surfaces/AppSurfaces.swift',
+    'VoiceInk/DesignSystem/Components/AppControls.swift',
+    'VoiceInk/DesignSystem/Components/InfoTip.swift',
+    'VoiceInk/DesignSystem/Components/CompactHeroSection.swift',
+    'VoiceInk/DesignSystem/Native/VisualEffectView.swift',
+    'VoiceInk/Features/Dashboard/Views/DashboardLayout.swift',
+    adapt('VoiceInk/App/Windows/WindowManager.swift', window_layout),
+    adapt('VoiceInk/App/Navigation/ContentView.swift', navigation_types),
+    adapt('VoiceInk/Features/Dashboard/Components/DashboardHeroCard.swift', hero_card),
     adapt('VoiceInk/Infrastructure/SystemIntegration/Paste/CursorPaster.swift', paste_without_local_ai),
     adapt('VoiceInk/Features/Shortcuts/Models/ShortcutAction.swift', shortcut_action),
     adapt('VoiceInk/Features/Shortcuts/State/ShortcutStore.swift', shortcut_store),
