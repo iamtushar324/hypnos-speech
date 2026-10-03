@@ -1,3 +1,19 @@
+# Hypnos Speech
+
+A native macOS capture client and self-hosted speech gateway. Forked from VoiceInk **v2.21**, preserving GPLv3 and upstream history.
+
+**Global hotkey → record microphone → Hypnos → paste final text.** The server owns models, dictionary, snippets and optional cleanup; the Mac preserves the returned text exactly.
+
+- [Mac setup, build, storage, validation and upstream updates](HYPNOS.md)
+- [Gateway setup and build](server/README.md) · [API contract](server/API.md)
+- Build the Mac app: `./scripts/build-hypnos.sh`
+- Test the Mac core: `swift test`
+- Test/build the server: `cd server && go test -race ./... && go build ./cmd/speechd`
+
+The upstream project and documentation follow below. Its stock build commands build VoiceInk; use the Hypnos build command above for this fork.
+
+---
+
 <div align="center">
   <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
   <h1>VoiceInk</h1>

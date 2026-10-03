@@ -103,3 +103,19 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Hypnos generated project, build/test output, runtime/credentials
+HypnosSpeech.xcodeproj/
+.hypnos-build/
+.hypnos-validation/
+.env
+.env.*
+*.key
+*.pem
+/credentials/
+state/
+Recordings/
+__pycache__/
+server/speechd
+.hypnos-native/
+.hypnos-native-build/

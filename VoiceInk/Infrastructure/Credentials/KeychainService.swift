@@ -25,7 +25,11 @@ final class KeychainService {
 
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "KeychainService")
     #if LOCAL_BUILD
+        #if HYPNOS_SPEECH
+        private let service = "space.hypnos.speech.mac"
+        #else
         private let service = "com.prakashjoshipax.VoiceInk.Local"
+        #endif
         private let defaults = UserDefaults.standard
         private let legacyLocalPrefix = "LocalKeychain_"
     #else

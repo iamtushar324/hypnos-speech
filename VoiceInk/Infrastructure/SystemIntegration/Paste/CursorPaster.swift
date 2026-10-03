@@ -37,14 +37,23 @@ class CursorPaster {
 
     @MainActor
     @discardableResult
-    static func startPasteAtCursor(_ text: String) -> Task<PasteOutcome, Never> {
+    static func startPasteAtCursor(
+        _ text: String, allowAutoLearn: Bool = true,
+        shouldCancel: @escaping @MainActor () -> Bool = { false }
+    ) -> Task<PasteOutcome, Never> {
         Task { @MainActor in
-            await performPasteSession(text)
+            await performPasteSession(text, allowAutoLearn: allowAutoLearn, shouldCancel: shouldCancel)
         }
     }
 
     @MainActor
-    private static func performPasteSession(_ text: String) async -> PasteOutcome {
+    private static func performPasteSession(
+        _ text: String, allowAutoLearn: Bool,
+        shouldCancel: @escaping @MainActor () -> Bool
+    ) async -> PasteOutcome {
+        guard !Task.isCancelled, !shouldCancel() else {
+            return PasteOutcome(result: .commandNotPosted, autoLearnGeneration: nil)
+        }
         let pasteboard = NSPasteboard.general
         let shouldRestoreClipboard = UserDefaults.standard.bool(forKey: "restoreClipboardAfterPaste")
         let savedContents = shouldRestoreClipboard ? snapshotClipboard(from: pasteboard) : []
@@ -63,9 +72,16 @@ class CursorPaster {
 
         await wait(prePasteDelay)
 
+        guard !Task.isCancelled, !shouldCancel() else {
+            if shouldRestoreClipboard {
+                scheduleClipboardRestore(savedContents, expectedText: text, sessionID: sessionID, on: pasteboard)
+            }
+            return PasteOutcome(result: .commandNotPosted, autoLearnGeneration: nil)
+        }
+
         let pasteResult: PasteResult
         let autoLearnGeneration: UInt64?
-        if AutoLearnSettings.isEnabled {
+        if allowAutoLearn && AutoLearnSettings.isEnabled {
             let targetProcessID = NSWorkspace.shared.frontmostApplication?.processIdentifier
             pasteResult = await postPasteCommand()
             autoLearnGeneration = await AutoLearnService.shared.pasteDidFinish(
