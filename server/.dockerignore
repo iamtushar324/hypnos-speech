@@ -1,0 +1,7 @@
+.git
+state
+credentials
+.env*
+*.key
+*.pem
+speechd

@@ -1,0 +1,16 @@
+.env*
+state/
+data/
+build/
+*.log
+*.wav
+*.ogg
+*.webm
+*.key
+*credentials*
+*secret*
+*token*
+.clerk/
+
+__pycache__/
+*.pyc
