@@ -26,13 +26,25 @@ Install Xcode and its Command Line Tools, Git and Python 3. Read upstream [BUILD
 open "$HOME/Applications/Hypnos Speech.app"
 ```
 
-The sole available Apple Development signing identity is selected automatically. Override with `LOCAL_CODESIGN_IDENTITY` when several exist. For supported ad-hoc signing:
+Quit Hypnos Speech before installing an update. To build while using the installed app:
+
+```sh
+./scripts/build-hypnos.sh --build-only
+# Quit Hypnos Speech, then install the already verified build:
+./scripts/build-hypnos.sh --install-only
+```
+
+The installer refuses to overwrite a running app. It stages and verifies a complete bundle, then replaces the closed installation; the previous bundle is retained under `~/Library/Caches/space.hypnos.speech.mac/BuildInstalls/` at the path printed by the script. Preferences, Keychain and recordings remain outside the bundle.
+
+The sole available Apple Development signing identity is selected automatically and retained in an ignored local file for subsequent builds. A missing saved identity stops the build rather than silently changing signing identity. Override with `LOCAL_CODESIGN_IDENTITY` set to the certificate's SHA-1 identifier from `security find-identity -v -p codesigning` when needed. For supported ad-hoc signing:
 
 ```sh
 LOCAL_CODESIGN_IDENTITY=- ./scripts/build-hypnos.sh
 ```
 
-Ad-hoc rebuilds may require granting permissions again. There is no security disabling or signing purchase. The script verifies the bundle signature before installing. It only copies to `~/Applications/Hypnos Speech.app`; it does not overwrite Handy or VoiceInk.
+Ad-hoc rebuilds may require granting permissions again. There is no security disabling or signing purchase. The script verifies the bundle signature before installing. It installs only to `~/Applications/Hypnos Speech.app`; it does not overwrite Handy or VoiceInk.
+
+If macOS shows Accessibility **on** but the app remains blocked after changing from ad-hoc to developer signing, the displayed entry can still reference the old build's signing requirement. In Privacy & Security → Accessibility, remove only Hypnos Speech with **−**, add `~/Applications/Hypnos Speech.app` with **+**, enable it, and relaunch. Approve any macOS authentication locally. The app's **Show This App in Finder** button identifies the running bundle. Ordinary updates signed with the same retained developer identity preserve the signing requirement; the installer warns when it changes.
 
 The generated Hypnos target compiles only VoiceInk's native capture/shortcut/Keychain/paste/UI primitives, our capture wrapper, and Swift Atomics **1.3.0**. Local-inference frameworks, model managers, Sparkle and the XPC inference helper are not linked or initialized. No model download or whisper.cpp build is required. This preserves compatibility with the installed Xcode 26.3 despite upstream's newer local-model package requirements.
 

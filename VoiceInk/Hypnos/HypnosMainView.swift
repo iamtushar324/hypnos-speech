@@ -276,8 +276,9 @@ private struct HypnosPreferencesView: View {
                     Button("Grant Microphone") { Task { await controller.requestMicrophone() } }
                     LabeledContent("Accessibility", value: controller.accessibilityGranted ? "Granted" : "Permission needed")
                     Button("Grant Accessibility") { controller.requestAccessibility() }
+                    Button("Show This App in Finder") { controller.revealApp() }
                 } header: { Text("macOS Permissions") } footer: {
-                    Text("Microphone captures your voice. Accessibility enables global hotkeys and Command-V paste. Enable Hypnos Speech in System Settings → Privacy & Security.")
+                    Text("Microphone captures your voice. Accessibility enables global hotkeys and Command-V paste. If Accessibility is already on but this app remains blocked, remove its old entry with −, add this installed app with +, enable it, and relaunch. A changed signing identity can leave an older grant visible.")
                 }
                 Section("Audio Input") {
                     Text("Uses the macOS default input device. Change it in System Settings → Sound → Input.")

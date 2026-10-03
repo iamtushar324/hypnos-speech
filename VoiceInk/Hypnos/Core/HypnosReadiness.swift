@@ -9,7 +9,7 @@ struct HypnosReadiness: Equatable {
 
     var recordingBlocker: String? {
         if !microphoneGranted { return "Microphone is off. Grant Microphone in Hypnos Speech → Settings." }
-        if !accessibilityGranted { return "Accessibility is off. Enable Hypnos Speech in macOS Privacy & Security → Accessibility." }
+        if !accessibilityGranted { return "macOS has not granted this build Accessibility. Enable Hypnos Speech, or refresh its entry if already enabled." }
         if !deviceKeyConfigured { return "Device key is missing. Enter your dedicated Mac key in Hypnos Speech → AI Models and save." }
         return nil
     }

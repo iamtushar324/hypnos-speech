@@ -143,8 +143,10 @@ final class HypnosController: ObservableObject {
     }
 
     func refreshPermissions() {
-        microphoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        accessibilityGranted = AXIsProcessTrusted()
+        let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        let accessibility = AXIsProcessTrusted()
+        if microphoneGranted != microphone { microphoneGranted = microphone }
+        if accessibilityGranted != accessibility { accessibilityGranted = accessibility }
         if !accessibilityGranted && hotkeyAvailable { shortcutMonitor.stop(); hotkeyAvailable = false }
     }
 
@@ -210,10 +212,12 @@ final class HypnosController: ObservableObject {
         _ = AXIsProcessTrustedWithOptions(options)
         refreshHotkey()
         if !accessibilityGranted {
-            status = "Enable Hypnos Speech in Privacy & Security → Accessibility."
+            status = "Enable this build in Accessibility. If already enabled, remove the old entry and add this installed app again."
             openPrivacySettings("Accessibility")
         }
     }
+
+    func revealApp() { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
 
     func openPrivacySettings(_ permission: String) {
         guard ["Microphone", "Accessibility"].contains(permission),
