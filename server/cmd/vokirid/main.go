@@ -19,7 +19,7 @@ import (
 	"github.com/iamtushar324/vokiri/server/internal/gateway"
 )
 
-var version = "development"
+var version = speech.Version
 
 func main() {
 	if err := run(); err != nil {

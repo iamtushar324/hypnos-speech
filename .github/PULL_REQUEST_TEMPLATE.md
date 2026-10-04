@@ -1,20 +1,11 @@
-# ⚠️ This Project Does Not Accept Pull Requests
+## Change
 
-Thank you for your interest in contributing to VoiceInk!
+Describe the problem and resulting behavior. Identify the affected client or server component.
 
-However, **this project is not currently accepting pull requests.**
+## Validation
 
-## Please close this PR
+List relevant checks and any live behavior that remains unverified.
 
-## Alternative ways to contribute:
+## Compatibility
 
-- 🐛 **Report bugs**: Open an [issue](../../issues) with detailed information
-- 💡 **Suggest features**: Share your ideas via [issues](../../issues) or [discussions](../../discussions)
-- 🍴 **Fork the project**: You're welcome to create and maintain your own fork
-- 📖 **Improve documentation**: Suggest corrections or clarifications via issues
-
-Thank you for understanding, and I appreciate your interest in VoiceInk!
-
----
-
-For more information, see [CONTRIBUTING.md](../CONTRIBUTING.md)
+Mention changes to the API, persisted state, client identity, or upstream source hooks. Keep credentials and personal runtime data out of the diff.

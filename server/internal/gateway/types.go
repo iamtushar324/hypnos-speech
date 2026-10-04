@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/iamtushar324/vokiri/server"
 	"github.com/iamtushar324/vokiri/server/internal/auth"
 )
 
-const version = "0.1.3"
+const version = speech.Version
 
 type Config struct {
 	StateDir            string

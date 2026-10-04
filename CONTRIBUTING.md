@@ -1,82 +1,13 @@
 # Contributing to Vokiri
 
-Vokiri client changes belong in `apps/`, shared gateway changes in `server/`. Read [AGENTS.md](AGENTS.md) and [VOKIRI.md](VOKIRI.md) before making changes. The upstream contribution guidance is preserved below; submit Vokiri changes to [this repository](https://github.com/iamtushar324/vokiri).
+Vokiri is a GPLv3 fork of [VoiceInk](https://github.com/Beingpax/VoiceInk) with its own clients and speech server. Submit Vokiri issues and changes to [iamtushar324/vokiri](https://github.com/iamtushar324/vokiri).
 
-# Contributing to VoiceInk
+Client code belongs in `apps/<platform>/`; the current Mac app is in `apps/macos/`. Server, web console, and protocol adapter changes belong in `server/`. Keep private deployment manifests, credentials, recordings, personal prompts, and runtime state outside this public repository.
 
-First off, thank you for considering contributing to VoiceInk! It's people like you that make VoiceInk such a great tool.
+Read [AGENTS.md](AGENTS.md) and [the Mac guide](VOKIRI.md). Work from the `vokiri` branch. Run `swift test` for client core changes, the Vokiri Release build for native UI changes, and `go test -race ./...` plus `go vet ./...` in `server/` for gateway changes. Check `server/web/app.js` with `node --check` after editing it.
 
-## ⚠️ Pull Requests Not Accepted
+Preserve the final-text contract: the Mac must save and deliver the server response exactly, without local rewriting or automatic retries. Changes must preserve cancellation and private recording retention. Describe any live dictation behavior that has not been tested.
 
-**As of now, this project is not accepting pull requests.** VoiceInk is open source, and you're welcome to fork and modify it for your own use.
+Keep upstream native files and type names intact where possible. Our build selects native primitives and generates asserted adapters; broad source renames make reviewed upstream merges harder. Retain copyright and license notices. The stock VoiceInk project remains available for comparison, while our own app identity, keys, data and updater behavior stay independent.
 
-**You can still contribute by:**
-- 🐛 **Reporting bugs** - Open an issue with detailed information
-- 💡 **Suggesting features** - Share your ideas via issues or discussions
-- 🍴 **Forking the project** - Feel free to create your own version
-- 📖 **Improving documentation** - Suggest clarifications or corrections via issues
-
-Thank you for understanding!
-
-## Code of Conduct
-
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
-
-## How Can I Contribute?
-
-### Reporting Bugs
-
-- Before submitting a bug report, please check if the issue has already been reported
-- Use the bug report template when creating an issue
-- Include as much relevant information as possible
-- Include steps to reproduce the issue
-
-### Suggesting Enhancements
-
-- Open an issue using the feature request template
-- Clearly describe the feature and its benefits
-- Discuss potential implementation approaches
-- Consider the feature's impact on existing functionality
-
-### Development Process
-
-1. Ensure you have all the requirements installed:
-   - macOS 15.0 or later
-   - Latest version of Xcode
-   - Latest version of Swift
-   - whisper.cpp properly set up
-
-2. Follow our coding standards:
-   - Use Swift style guidelines
-   - Write meaningful commit messages
-   - Include comments where necessary
-   - Add tests for new features
-
-3. Testing:
-   - Run existing tests
-   - Add new tests for new functionality
-   - Ensure all tests pass before submitting PR
-
-## Style Guidelines
-
-- Follow Swift style guidelines
-- Use meaningful variable and function names
-- Keep functions focused and concise
-- Comment complex logic
-- Write self-documenting code where possible
-
-## Community
-
-- Join our discussions
-- Help other contributors
-- Share your ideas
-- Be respectful and constructive
-
-## Questions?
-
-If you have any questions or need clarification, feel free to:
-1. Open an issue
-2. Start a discussion
-3. Reach out to the maintainers
-
-Thank you for contributing to VoiceInk! 🎉 
+Use existing compatibility identifiers for installed client settings and encrypted server state. Changing a product label must never orphan the Keychain item or invalidate encrypted history. Review [server setup and upgrade notes](server/README.md) before modifying persisted formats.

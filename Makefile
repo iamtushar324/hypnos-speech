@@ -1,3 +1,6 @@
+# Bare make builds the Vokiri client. Upstream targets remain explicit.
+.DEFAULT_GOAL := vokiri
+
 # Define a directory for dependencies in the user's home folder
 DEPS_DIR := $(HOME)/VoiceInk-Dependencies
 WHISPER_CPP_DIR := $(DEPS_DIR)/whisper.cpp
