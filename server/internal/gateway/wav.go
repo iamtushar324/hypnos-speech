@@ -13,6 +13,10 @@ type wavParts struct {
 }
 
 func parseWAV(b []byte) (wavParts, error) {
+	return parseWAVPayload(b, false)
+}
+
+func parseWAVPayload(b []byte, allowEmpty bool) (wavParts, error) {
 	if len(b) < 12 || string(b[:4]) != "RIFF" || string(b[8:12]) != "WAVE" {
 		return wavParts{}, errors.New("provider did not return a WAV file")
 	}
@@ -21,6 +25,7 @@ func parseWAV(b []byte) (wavParts, error) {
 		return wavParts{}, errors.New("truncated WAV container")
 	}
 	var out wavParts
+	dataSeen := false
 	for off := 12; off+8 <= len(b); {
 		declared := binary.LittleEndian.Uint32(b[off+4 : off+8])
 		start := off + 8
@@ -40,6 +45,10 @@ func parseWAV(b []byte) (wavParts, error) {
 		case "fmt ":
 			out.format = append([]byte(nil), b[start:end]...)
 		case "data":
+			if dataSeen && allowEmpty {
+				return wavParts{}, errors.New("multiple WAV audio chunks")
+			}
+			dataSeen = true
 			out.data = append(out.data, b[start:end]...)
 		}
 		off = end
@@ -47,7 +56,7 @@ func parseWAV(b []byte) (wavParts, error) {
 			off++
 		}
 	}
-	if len(out.format) < 16 || len(out.data) == 0 {
+	if len(out.format) < 16 || (!allowEmpty && len(out.data) == 0) || !dataSeen {
 		return wavParts{}, errors.New("WAV is missing format or audio data")
 	}
 	blockAlign := int(binary.LittleEndian.Uint16(out.format[12:14]))

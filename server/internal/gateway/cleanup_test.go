@@ -105,7 +105,7 @@ func TestCleanupHTTPPipelineMetadataAndHistory(t *testing.T) {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	p, _ := mw.CreateFormFile("file", "audio.wav")
-	_, _ = p.Write(pcm16WAV(make([]byte, 320), 16000))
+	_, _ = p.Write(pcm16WAV(audiblePCM(), 16000))
 	_ = mw.Close()
 	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/audio/transcriptions", &body)
 	req.Header.Set("Authorization", "Bearer owner")
@@ -156,7 +156,7 @@ func TestCleanupNativeAndDictionWebSockets(t *testing.T) {
 	writeDictionFrame(t, native, websocket.MessageText, []byte(`{"type":"start","model":"whisper-large-v3-turbo","language":"en"}`))
 	var ready map[string]any
 	readTestJSON(t, native, &ready)
-	writeDictionFrame(t, native, websocket.MessageBinary, make([]byte, 320))
+	writeDictionFrame(t, native, websocket.MessageBinary, audiblePCM())
 	writeDictionFrame(t, native, websocket.MessageText, []byte(`{"action":"done"}`))
 	var final map[string]any
 	readTestJSON(t, native, &final)
@@ -170,7 +170,7 @@ func TestCleanupNativeAndDictionWebSockets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeDictionFrame(t, diction, websocket.MessageBinary, make([]byte, 320))
+	writeDictionFrame(t, diction, websocket.MessageBinary, audiblePCM())
 	writeDictionFrame(t, diction, websocket.MessageText, []byte(`{"action":"done"}`))
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

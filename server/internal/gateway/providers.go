@@ -100,6 +100,11 @@ func (s *Server) handleTranscription(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "streaming models must use /v1/audio/stream")
 		return
 	}
+	// Before provider calls, cleanup, retained audio or transcription history.
+	if silentWAV(audio) {
+		writeNoSpeech(w, format)
+		return
+	}
 	id := newID()
 	start := time.Now()
 	if err := s.state.saveAudio(id, audio); err != nil {

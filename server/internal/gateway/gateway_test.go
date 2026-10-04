@@ -179,7 +179,7 @@ func TestGroqBatchWebSocketHasNoFakePartials(t *testing.T) {
 	if ready["type"] != "ready" || ready["mode"] != "batch" {
 		t.Fatalf("unexpected ready: %#v", ready)
 	}
-	if err := c.Write(context.Background(), websocket.MessageBinary, make([]byte, 3200)); err != nil {
+	if err := c.Write(context.Background(), websocket.MessageBinary, audiblePCM()); err != nil {
 		t.Fatal(err)
 	}
 	writeTestJSON(t, c, map[string]any{"action": "done"})
@@ -217,7 +217,7 @@ func TestMicrosoftBatchRequestContract(t *testing.T) {
 	defer provider.Close()
 	s := testServer(t)
 	s.client = provider.Client()
-	res, err := s.microsoftTranscribe(context.Background(), providerState{APIKey: "azure-key", Endpoint: provider.URL, BatchDeployment: "MAI-Transcribe-2"}, "hi-IN", "", "audio/wav", pcm16WAV(make([]byte, 320), 16000), []DictionaryEntry{{Word: "Hypnos"}})
+	res, err := s.microsoftTranscribe(context.Background(), providerState{APIKey: "azure-key", Endpoint: provider.URL, BatchDeployment: "MAI-Transcribe-2"}, "hi-IN", "", "audio/wav", pcm16WAV(audiblePCM(), 16000), []DictionaryEntry{{Word: "Hypnos"}})
 	if err != nil {
 		t.Fatal(err)
 	}

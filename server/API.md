@@ -145,3 +145,13 @@ All real data/API and saving/error/loading states. Browser mic capture uses Medi
 for batch multipart; Microsoft streaming uses AudioContext downsampled PCM16 in small
 chunks (no unsupported claim of batch being streaming). Responsive keyboard accessible.
 Never include infrastructure implementation jargon in ordinary product flows.
+
+## Silent captures (server 0.2.1)
+
+The batch transcription endpoints inspect supported PCM/IEEE-float WAV before provider calls, cleanup, audio retention or history. Silent/very faint captures and brief mic clicks return HTTP 200 with `{"text":"","no_speech":true,"cleanup_status":"skipped"}` and `X-Speech-No-Speech: true`. With `response_format=text`, the response body is empty. There is no transcription ID because no history entry is created.
+
+The Groq batch WebSocket returns `{"type":"final","text":"","no_speech":true}` and closes normally. Diction's PCM WebSocket preserves its existing two-field contract: `{"text":"","mode":"transcribe"}` followed by a normal close. Both skip providers and history.
+
+The signal check requires 40 consecutive milliseconds above −55 dBFS RMS, measured in 20 ms windows per channel with DC removed. Supported WAV formats are PCM 8/16/24/32-bit and IEEE float 32/64-bit, 1–8 channels, 8–192 kHz. Audio with a usable signal is passed unchanged. This is a conservative silence gate, not learned speech/noise classification; louder background sounds can pass. Unsupported/compressed/malformed audio retains its existing provider path. The separate Microsoft realtime streaming path is unchanged.
+
+This change is entirely server-side. Existing clients can interpret an empty result as they already do; the current Mac client shows its existing empty-response status and does not paste. No client update or automatic microphone timeout is introduced.

@@ -140,7 +140,7 @@ func TestDictionStreamPCMContextDoneAndHistory(t *testing.T) {
 		t.Fatalf("server negotiated unsupported subprotocol %q", c.Subprotocol())
 	}
 	writeDictionFrame(t, c, websocket.MessageText, []byte(`{"application":"Notes","before":"descriptive prose"}`))
-	writeDictionFrame(t, c, websocket.MessageBinary, make([]byte, 3200))
+	writeDictionFrame(t, c, websocket.MessageBinary, audiblePCM())
 	writeDictionFrame(t, c, websocket.MessageText, []byte(`{"action":"done","language":"en-IN"}`))
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -272,7 +272,7 @@ func TestDictionHTTPAliasAndUnknownModel(t *testing.T) {
 		var body bytes.Buffer
 		mw := multipart.NewWriter(&body)
 		part, _ := mw.CreateFormFile("file", "audio.wav")
-		_, _ = part.Write(pcm16WAV(make([]byte, 320), 16000))
+		_, _ = part.Write(pcm16WAV(audiblePCM(), 16000))
 		_ = mw.WriteField("model", model)
 		_ = mw.Close()
 		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/diction/v1/audio/transcriptions?language=en-IN", &body)

@@ -313,6 +313,12 @@ func (s *Server) dictionOriginPatterns() []string {
 func (s *Server) dictionFinish(ctx context.Context, c *websocket.Conn, model Model, language string, sampleRate int, pcm []byte) {
 	state := s.state.snapshot()
 	audio := pcm16WAV(pcm, sampleRate)
+	if silentWAV(audio) {
+		// Preserve Diction's two-field final-message contract.
+		_ = dictionWSWrite(ctx, c, map[string]any{"text": "", "mode": "transcribe"})
+		_ = c.Close(websocket.StatusNormalClosure, "no speech")
+		return
+	}
 	id := newID()
 	started := time.Now()
 	if err := s.state.saveAudio(id, audio); err != nil {

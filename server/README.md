@@ -52,3 +52,7 @@ Builds do not deploy automatically. Keep the previous binary/image and retained 
 The Vokiri rename preserves the `SPEECH_*` configuration contract, API routes, device key hashes, serialized state and audio formats. The AES-GCM associated-data identifiers retain their original `hypnos-speech-*` values: changing them would make existing encrypted state unreadable. Keep your existing state directory, master key, origin and Clerk configuration when deploying this source. The binary is now `vokirid`; update the service executable/image entrypoint, not the data.
 
 For Linux hosts using local containerd, `scripts/build-image.py` packages a static Linux/amd64 binary and the host CA bundle into an OCI archive without a registry push. Production manifests, runtime keys and backups remain deployment-owned.
+
+## Silence handling
+
+Before transcription, the server skips supported WAV captures with no sustained audible signal. This prevents the speech model from inventing words for a silent mic open/close. No transcription/cleanup call or server history entry is made. Native Mac WAV and Diction PCM captures are covered; see [the exact formats, responses, and limitations](API.md#silent-captures-server-021). Client capture controls and text handling remain unchanged.

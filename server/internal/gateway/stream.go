@@ -180,6 +180,11 @@ func (s *Server) groqBatchStream(ctx context.Context, c *websocket.Conn, start s
 		return
 	}
 	audio := pcm16WAV(pcm.Bytes(), 16000)
+	if silentWAV(audio) {
+		_ = s.wsWrite(ctx, c, map[string]any{"type": "final", "text": "", "no_speech": true})
+		_ = c.Close(websocket.StatusNormalClosure, "no speech")
+		return
+	}
 	id := newID()
 	started := time.Now()
 	if err := s.state.saveAudio(id, audio); err != nil {
