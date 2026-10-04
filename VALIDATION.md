@@ -20,8 +20,18 @@ Historical, pre-rebrand results and limitations are preserved in [the earlier va
 
 ## Deployment check
 
-- The live gateway is built from the monorepo's `server/` at server-source commit `d5ef296`. Daemon, administration API and Diction share version 0.2.0.
+- The initial rebrand deployed the monorepo's `server/` at server-source commit `d5ef296`, version 0.2.0. The subsequent server-only release is recorded below.
 - A disposable upgrade rehearsal created encrypted state with the previous binary, then opened it with Vokiri across two restart cycles. Authentication scope, single-writer locking and persistence passed without provider inference.
 - Production health and anonymous-admin rejection passed. Web title, sign-in branding and favicon were inspected in the browser. The service catalog points to the running Vokiri deployment.
 - Production encrypted state and retained audio remained byte-identical to their pre-deployment fingerprints. Verified backups and the previous image are retained privately for rollback.
 - GitHub repository, default branch, documentation, issue template and contribution guidance use Vokiri. Bare `make` selects the Vokiri build.
+
+## Server silence guard — 0.2.1
+
+- Server-source commit `0151f43` is deployed. All client sources and the installed Mac app remain unchanged.
+- Go race tests and vet passed on macOS and Linux. Regressions cover silent/empty WAV, faint noise, DC offset, isolated clicks, quiet audible signals, a short signal after long silence, supported sample formats and opposite-phase stereo.
+- Both multipart routes and the Groq/Diction batch WebSockets skip speech providers, cleanup, server audio retention and history for silent input. Tests preserve audible input bytes and a legitimate “Thank you.” response.
+- A disposable upgrade rehearsal on the deployment host returned empty responses for synthetic one-second silence in 4.87–8.98 ms across two restart cycles. These are local HTTP round trips, not physical microphone or remote-network timings. No microphone recording was performed.
+- Production health and anonymous-admin rejection passed, and the Diction adapter reports `vokiri/0.2.1`. Encrypted state and retained audio matched their pre-deployment fingerprints. Verified backups and the previous 0.2.0 image are retained privately.
+- This is a conservative energy gate, not learned speech/noise classification. Louder background noise can pass. Unsupported/compressed audio and Microsoft's separate realtime path retain their existing behavior; see [the response contract and scope](server/API.md#silent-captures-server-021).
+- Existing clients handle an empty result as before. The current Mac client shows its empty-response status and does not paste; this release introduces no client microphone timeout or new model dependency.
