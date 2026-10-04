@@ -17,3 +17,11 @@
 - Initial server import differences were reviewed: the public source intentionally excludes the private owner default, personal prompt and private operational data.
 
 Historical, pre-rebrand results and limitations are preserved in [the earlier validation record](docs/history/2026-10-03-hypnos-validation.md).
+
+## Deployment check
+
+- The live gateway is built from the monorepo's `server/` at server-source commit `d5ef296`. Daemon, administration API and Diction share version 0.2.0.
+- A disposable upgrade rehearsal created encrypted state with the previous binary, then opened it with Vokiri across two restart cycles. Authentication scope, single-writer locking and persistence passed without provider inference.
+- Production health and anonymous-admin rejection passed. Web title, sign-in branding and favicon were inspected in the browser. The service catalog points to the running Vokiri deployment.
+- Production encrypted state and retained audio remained byte-identical to their pre-deployment fingerprints. Verified backups and the previous image are retained privately for rollback.
+- GitHub repository, default branch, documentation, issue template and contribution guidance use Vokiri. Bare `make` selects the Vokiri build.
