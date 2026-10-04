@@ -1,4 +1,4 @@
-#if HYPNOS_SPEECH
+#if VOKIRI
 import AppKit
 import AVFoundation
 import Foundation
@@ -6,18 +6,18 @@ import Foundation
 /// Explicit local diagnostic: fresh microphone capture + real event tap + paste into a disposable document.
 /// No network request, key access, existing recording, selected-text, or screen access.
 @MainActor
-final class HypnosNativeValidation {
+final class VokiriNativeValidation {
     private var window: NSWindow?
     private let monitor = ShortcutMonitor()
 
-    private func capture(recorder: HypnosRecorder, seconds: Int, onStarted: () -> Void, onStopped: () -> Void) async throws -> (URL, AVAudioFile, Double) {
+    private func capture(recorder: VokiriRecorder, seconds: Int, onStarted: () -> Void, onStopped: () -> Void) async throws -> (URL, AVAudioFile, Double) {
         let fm = FileManager.default
         let directory = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("space.hypnos.speech.mac/Validation", isDirectory: true)
         try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let audio = directory.appendingPathComponent("fresh-\(UUID()).wav")
         guard fm.createFile(atPath: audio.path, contents: Data(), attributes: [.posixPermissions: 0o600]) else {
-            throw HypnosError.storage
+            throw VokiriError.storage
         }
         try await recorder.startRecording(toOutputFile: audio)
         try Task.checkCancellation()
@@ -34,7 +34,7 @@ final class HypnosNativeValidation {
         return (audio, try AVAudioFile(forReading: audio), peak)
     }
 
-    func runMicrophone(recorder: HypnosRecorder, onStarted: () -> Void, onStopped: () -> Void) async throws -> String {
+    func runMicrophone(recorder: VokiriRecorder, onStarted: () -> Void, onStopped: () -> Void) async throws -> String {
         let (audio, recorded, peak) = try await capture(recorder: recorder, seconds: 5, onStarted: onStarted, onStopped: onStopped)
         let passed = recorded.length > 0 && recorded.fileFormat.sampleRate == 16000
         let report: [String: Any] = ["timestamp": ISO8601DateFormatter().string(from: Date()),
@@ -46,7 +46,7 @@ final class HypnosNativeValidation {
         return passed ? "Microphone test passed — fresh 16 kHz WAV captured locally. Nothing uploaded." : "Microphone test failed — no usable audio frames."
     }
 
-    func run(recorder: HypnosRecorder, shouldCancel: @escaping @MainActor () -> Bool, onStarted: () -> Void, onStopped: () -> Void) async throws -> String {
+    func run(recorder: VokiriRecorder, shouldCancel: @escaping @MainActor () -> Bool, onStarted: () -> Void, onStopped: () -> Void) async throws -> String {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized, AXIsProcessTrusted() else {
             return "Local validation needs Microphone and Accessibility permissions first."
         }
@@ -80,7 +80,7 @@ final class HypnosNativeValidation {
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.font = .monospacedSystemFont(ofSize: 14, weight: .regular)
         let document = NSWindow(contentRect: textView.frame, styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        document.title = "Hypnos Speech — disposable validation document"
+        document.title = "Vokiri — disposable validation document"
         document.contentView = textView
         document.isReleasedWhenClosed = false
         document.center()
@@ -89,7 +89,7 @@ final class HypnosNativeValidation {
         document.makeKeyAndOrderFront(nil)
         document.makeFirstResponder(textView)
         try await Task.sleep(nanoseconds: 250_000_000)
-        let fixture = " \n# Hypnos [keep brackets]\n\nनमस्ते — café 👋\n\n```swift\nlet name = \"Tushar\"\n  print(name)\n```\n\nTrailing spaces  \n"
+        let fixture = " \n# Vokiri [keep brackets]\n\nनमस्ते — café 👋\n\n```swift\nlet name = \"Tushar\"\n  print(name)\n```\n\nTrailing spaces  \n"
         try Task.checkCancellation()
         let result = await CursorPaster.startPasteAtCursor(fixture, allowAutoLearn: false, shouldCancel: shouldCancel).value
         try await Task.sleep(nanoseconds: 250_000_000)
@@ -106,7 +106,7 @@ final class HypnosNativeValidation {
         let report: [String: Any] = [
             "timestamp": ISO8601DateFormatter().string(from: Date()), "microphone_wav": microphonePassed,
             "global_hotkey_synthetic_events": hotkeyPassed, "exact_native_paste": pastePassed,
-            "native_paste_cancellation": cancelPassed, "live_hypnos_transcription": false,
+            "native_paste_cancellation": cancelPassed, "live_vokiri_transcription": false,
             "audio_file": audio.lastPathComponent, "frames": recorded.length
         ]
         let output = directory.appendingPathComponent("latest.json")

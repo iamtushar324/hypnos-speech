@@ -1,4 +1,4 @@
-#if HYPNOS_SPEECH
+#if VOKIRI
 import AppKit
 import Combine
 import AVFoundation
@@ -12,7 +12,7 @@ struct AudioMeter: Equatable {
 
 /// Thin capture-only wrapper around VoiceInk's AUHAL recorder. No media, context, or inference services.
 @MainActor
-final class HypnosRecorder: ObservableObject {
+final class VokiriRecorder: ObservableObject {
     private let core = CoreAudioRecorder()
     private let queue = DispatchQueue(label: "space.hypnos.speech.mac.capture", qos: .userInitiated)
 
@@ -23,7 +23,7 @@ final class HypnosRecorder: ObservableObject {
         var device = AudioDeviceID(0)
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device) == noErr,
-              device != 0 else { throw HypnosError.emptyAudio }
+              device != 0 else { throw VokiriError.emptyAudio }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [core] in
                 do { try core.startRecording(toOutputFile: url, deviceID: device); continuation.resume() }
@@ -51,7 +51,7 @@ struct LegacyKeyboardShortcut: Codable {
 }
 
 @MainActor
-enum HypnosAlert {
+enum VokiriAlert {
     enum Kind { case error, warning, info }
     static func showNotification(title: String, type: Kind, duration: TimeInterval = 2) {
         let alert = NSAlert()

@@ -14,9 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"hypnos.local/speech"
-	"hypnos.local/speech/internal/auth"
-	"hypnos.local/speech/internal/gateway"
+	"github.com/iamtushar324/vokiri/server"
+	"github.com/iamtushar324/vokiri/server/internal/auth"
+	"github.com/iamtushar324/vokiri/server/internal/gateway"
 )
 
 var version = "development"
@@ -127,7 +127,7 @@ func run() error {
 	defer stop()
 	done := make(chan error, 1)
 	go func() { done <- srv.ListenAndServe() }()
-	log.Printf("Hypnos Speech %s listening on %s", version, *addr)
+	log.Printf("Vokiri %s listening on %s", version, *addr)
 	select {
 	case err := <-done:
 		if !errors.Is(err, http.ErrServerClosed) {

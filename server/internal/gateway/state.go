@@ -14,6 +14,7 @@ import (
 	"syscall"
 )
 
+// Persisted encryption format: keep these legacy AAD values across product renames.
 const stateAAD = "hypnos-speech-state-v1"
 
 type stateStore struct {

@@ -116,7 +116,7 @@ func (s *Server) callOpenRouterCleanup(ctx context.Context, p providerState, set
 	req.Header.Set("Authorization", "Bearer "+p.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", s.cfg.PublicURL)
-	req.Header.Set("X-Title", "Hypnos Speech")
+	req.Header.Set("X-Title", "Vokiri")
 	resp, err := s.client.Do(req)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {

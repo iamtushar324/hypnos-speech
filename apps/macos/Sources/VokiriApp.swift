@@ -1,32 +1,32 @@
-#if HYPNOS_SPEECH
+#if VOKIRI
 import AppKit
 import AVFoundation
 import SwiftUI
 
 @main
-struct HypnosSpeechApp: App {
-    @StateObject private var controller = HypnosController()
+struct VokiriApp: App {
+    @StateObject private var controller = VokiriController()
 
     var body: some Scene {
-        Window("Hypnos Speech", id: "hypnos-settings") {
-            HypnosMainView(controller: controller)
+        Window("Vokiri", id: "vokiri-settings") {
+            VokiriMainView(controller: controller)
                 .frame(minWidth: AppWindowLayout.width, minHeight: AppWindowLayout.minimumHeight)
         }
         .defaultSize(width: AppWindowLayout.width, height: AppWindowLayout.minimumHeight)
-        MenuBarExtra("Hypnos Speech", systemImage: controller.menuBarSymbol) {
-            HypnosMenu(controller: controller)
+        MenuBarExtra("Vokiri", systemImage: controller.menuBarSymbol) {
+            VokiriMenu(controller: controller)
         }
     }
 }
 
 @MainActor
-final class HypnosController: ObservableObject {
+final class VokiriController: ObservableObject {
     static let keyAccount = "speech-device-key"
-    let recorder = HypnosRecorder()
-    @Published var configuration: HypnosConfiguration
-    @Published var status = "Ready — Hypnos final-output mode"
+    let recorder = VokiriRecorder()
+    @Published var configuration: VokiriConfiguration
+    @Published var status = "Ready — Vokiri final-output mode"
     @Published var recordingState: RecordingState = .idle
-    @Published var history: [HypnosRecording] = []
+    @Published var history: [VokiriRecording] = []
     @Published var hotkeyAvailable = false
     @Published var hasDeviceKey = false
     @Published var microphoneGranted = false
@@ -39,8 +39,8 @@ final class HypnosController: ObservableObject {
             shortcutMonitor.updateStandaloneModifierActions(pushToTalk ? [] : [.primaryRecording])
         }
     }
-    private var workflow: HypnosWorkflow?
-    private var currentRecording: HypnosRecording?
+    private var workflow: VokiriWorkflow?
+    private var currentRecording: VokiriRecording?
     private var recordingGeneration = UUID()
     private var stopWhenStarted = false
     @Published private var captureTransition = false
@@ -51,13 +51,13 @@ final class HypnosController: ObservableObject {
     private var lastTarget: NSRunningApplication?
     private var pasteTarget: NSRunningApplication?
     private var permissionTimer: Timer?
-    private let nativeValidation = HypnosNativeValidation()
+    private let nativeValidation = VokiriNativeValidation()
     private var validationTask: Task<String, Error>?
     private var feedbackTask: Task<Void, Never>?
     private var readinessSnapshot: Data?
     var busy: Bool { captureTransition || recordingState != .idle || workflow?.isBusy == true }
-    var readiness: HypnosReadiness {
-        HypnosReadiness(deviceKeyConfigured: hasDeviceKey, microphoneGranted: microphoneGranted,
+    var readiness: VokiriReadiness {
+        VokiriReadiness(deviceKeyConfigured: hasDeviceKey, microphoneGranted: microphoneGranted,
                         accessibilityGranted: accessibilityGranted, hotkeyInstalled: hotkeyAvailable)
     }
     var menuBarSymbol: String {
@@ -72,8 +72,8 @@ final class HypnosController: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
-        configuration = HypnosConfiguration(
-            endpoint: defaults.string(forKey: "HypnosEndpoint") ?? HypnosConfiguration.defaultEndpoint,
+        configuration = VokiriConfiguration(
+            endpoint: defaults.string(forKey: "HypnosEndpoint") ?? VokiriConfiguration.defaultEndpoint,
             model: defaults.string(forKey: "HypnosModel") ?? "whisper-large-v3-turbo",
             profileID: defaults.string(forKey: "HypnosProfileID") ?? ""
         )
@@ -83,13 +83,13 @@ final class HypnosController: ObservableObject {
                                      "AutoLearnEnabled": false])
         hasDeviceKey = KeychainService.shared.exists(forKey: Self.keyAccount, syncable: false)
         do {
-            let store = try HypnosStore()
+            let store = try VokiriStore()
             try store.recoverInterrupted()
-            let workflow = HypnosWorkflow(store: store)
+            let workflow = VokiriWorkflow(store: store)
             self.workflow = workflow
             workflow.onChange = { [weak self] in self?.refreshWorkflow() }
             refreshHistory()
-        } catch { status = HypnosError.storage.localizedDescription }
+        } catch { status = VokiriError.storage.localizedDescription }
         ShortcutStore.seedShortcut(.key(keyCode: 49, modifierFlags: [.control, .option]), for: .primaryRecording)
         shortcutObserver = NotificationCenter.default.addObserver(forName: ShortcutStore.shortcutDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.refreshHotkey() }
@@ -172,7 +172,7 @@ final class HypnosController: ObservableObject {
 
     func saveSettings(key: String) -> Bool {
         do { _ = try configuration.validatedURL() }
-        catch { status = HypnosError.configuration.localizedDescription; return false }
+        catch { status = VokiriError.configuration.localizedDescription; return false }
         if !key.isEmpty {
             guard key.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
                   KeychainService.shared.save(key, forKey: Self.keyAccount, syncable: false,
@@ -186,7 +186,7 @@ final class HypnosController: ObservableObject {
         defaults.set(configuration.model, forKey: "HypnosModel")
         defaults.set(configuration.profileID, forKey: "HypnosProfileID")
         hasDeviceKey = KeychainService.shared.exists(forKey: Self.keyAccount, syncable: false)
-        status = hasDeviceKey ? "Settings saved. Ready for a fresh recording." : HypnosError.missingKey.localizedDescription
+        status = hasDeviceKey ? "Settings saved. Ready for a fresh recording." : VokiriError.missingKey.localizedDescription
         writeReadiness()
         return true
     }
@@ -202,7 +202,7 @@ final class HypnosController: ObservableObject {
     func requestMicrophone() async {
         let allowed = await AVCaptureDevice.requestAccess(for: .audio)
         refreshPermissions()
-        status = allowed ? (readiness.recordingBlocker ?? "Microphone granted. Ready to record.") : "Enable Hypnos Speech in Privacy & Security → Microphone."
+        status = allowed ? (readiness.recordingBlocker ?? "Microphone granted. Ready to record.") : "Enable Vokiri in Privacy & Security → Microphone."
         writeReadiness()
         if !allowed { openPrivacySettings("Microphone") }
     }
@@ -250,7 +250,7 @@ final class HypnosController: ObservableObject {
                 return
             }
             recordingState = .recording
-            status = "Recording — stop to send to Hypnos"
+            status = "Recording — stop to send to Vokiri"
             writeReadiness()
             if stopWhenStarted { await stopAndSubmit() }
         } catch {
@@ -279,13 +279,13 @@ final class HypnosController: ObservableObject {
         submit(record)
     }
 
-    func retry(_ record: HypnosRecording) {
+    func retry(_ record: VokiriRecording) {
         guard !busy, record.status != .completed else { return }
         pasteTarget = lastTarget
         submit(record) // Only this explicit user action resubmits a retained recording.
     }
 
-    private func submit(_ record: HypnosRecording) {
+    private func submit(_ record: VokiriRecording) {
         guard let workflow else { return }
         let key = KeychainService.shared.getString(forKey: Self.keyAccount, syncable: false) ?? ""
         indicatorMessage = nil
@@ -312,7 +312,7 @@ final class HypnosController: ObservableObject {
             canceled.status = .canceled
             canceled.error = "Canceled; recording retained."
             do { try workflow.store.save(canceled) }
-            catch { status = HypnosError.storage.localizedDescription }
+            catch { status = VokiriError.storage.localizedDescription }
         }
         recordingState = .idle
         status = "Canceled — no late response will be pasted"
@@ -321,12 +321,12 @@ final class HypnosController: ObservableObject {
         refreshHistory()
     }
 
-    func pasteSaved(_ record: HypnosRecording) {
+    func pasteSaved(_ record: VokiriRecording) {
         guard !busy, let text = record.text else { return }
         Task { @MainActor in
             if let target = lastTarget, !target.isTerminated { target.activate(options: []) }
             let result = await CursorPaster.startPasteAtCursor(text, allowAutoLearn: false).value
-            status = result.result.didPostPasteCommand ? "Paste command posted — text preserved exactly" : HypnosError.paste.localizedDescription
+            status = result.result.didPostPasteCommand ? "Paste command posted — text preserved exactly" : VokiriError.paste.localizedDescription
         }
     }
 
@@ -374,7 +374,7 @@ final class HypnosController: ObservableObject {
         guard let workflow else { return }
         switch workflow.state {
         case .idle: break
-        case .processing: recordingState = .transcribing; status = "Processing on Hypnos…"
+        case .processing: recordingState = .transcribing; status = "Processing on Vokiri…"
         case .success: recordingState = .idle; status = "Text saved; paste command posted"
         case .failed(let message): recordingState = .idle; status = message
         case .canceled: recordingState = .idle; status = "Canceled — recording retained"
@@ -385,14 +385,14 @@ final class HypnosController: ObservableObject {
 
     private func refreshHistory() {
         do { history = try workflow?.store.list() ?? [] }
-        catch { status = HypnosError.storage.localizedDescription }
+        catch { status = VokiriError.storage.localizedDescription }
     }
 
     private func showIndicator() {
         feedbackTask?.cancel()
         if indicator == nil {
             let panel = MiniRecorderPanel(contentRect: .zero)
-            panel.contentView = NSHostingView(rootView: HypnosIndicator(controller: self))
+            panel.contentView = NSHostingView(rootView: VokiriIndicator(controller: self))
             indicator = panel
         }
         _ = indicator?.show()
@@ -411,8 +411,8 @@ final class HypnosController: ObservableObject {
     }
 }
 
-private struct HypnosIndicator: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriIndicator: View {
+    @ObservedObject var controller: VokiriController
     var body: some View {
         VStack {
             Spacer()
@@ -445,8 +445,8 @@ private struct HypnosIndicator: View {
     }
 }
 
-private struct HypnosMenu: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriMenu: View {
+    @ObservedObject var controller: VokiriController
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Text(controller.status)
@@ -455,12 +455,12 @@ private struct HypnosMenu: View {
         }.disabled(controller.busy && controller.recordingState != .recording)
         Button("Cancel") { Task { await controller.cancel() } }.disabled(!controller.busy)
         Divider()
-        Button("Open Hypnos Speech…") {
-            openWindow(id: "hypnos-settings")
+        Button("Open Vokiri…") {
+            openWindow(id: "vokiri-settings")
             NSApp.activate(ignoringOtherApps: true)
         }
         Divider()
-        Button("Quit Hypnos Speech") { NSApp.terminate(nil) }
+        Button("Quit Vokiri") { NSApp.terminate(nil) }
     }
 }
 

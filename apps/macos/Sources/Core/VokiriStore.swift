@@ -1,6 +1,6 @@
 import Foundation
 
-struct HypnosRecording: Codable, Identifiable, Equatable {
+struct VokiriRecording: Codable, Identifiable, Equatable {
     enum Status: String, Codable { case recording, processing, completed, failed, canceled }
     let id: UUID
     let createdAt: Date
@@ -10,7 +10,7 @@ struct HypnosRecording: Codable, Identifiable, Equatable {
 }
 
 /// Separate, private app storage. Never scans or imports recordings from other applications.
-final class HypnosStore {
+final class VokiriStore {
     let root: URL
     private let fm = FileManager.default
 
@@ -22,19 +22,19 @@ final class HypnosStore {
         try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
     }
 
-    func audioURL(_ record: HypnosRecording) -> URL { root.appendingPathComponent("\(record.id).wav") }
-    private func metadataURL(_ record: HypnosRecording) -> URL { root.appendingPathComponent("\(record.id).json") }
+    func audioURL(_ record: VokiriRecording) -> URL { root.appendingPathComponent("\(record.id).wav") }
+    private func metadataURL(_ record: VokiriRecording) -> URL { root.appendingPathComponent("\(record.id).json") }
 
-    func create() throws -> HypnosRecording {
-        let record = HypnosRecording(id: UUID(), createdAt: Date(), status: .recording)
+    func create() throws -> VokiriRecording {
+        let record = VokiriRecording(id: UUID(), createdAt: Date(), status: .recording)
         guard fm.createFile(atPath: audioURL(record).path, contents: Data(), attributes: [.posixPermissions: 0o600]) else {
-            throw HypnosError.storage
+            throw VokiriError.storage
         }
         try save(record)
         return record
     }
 
-    func save(_ record: HypnosRecording) throws {
+    func save(_ record: VokiriRecording) throws {
         try JSONEncoder().encode(record).write(to: metadataURL(record), options: .atomic)
         try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: metadataURL(record).path)
         if fm.fileExists(atPath: audioURL(record).path) {
@@ -42,10 +42,10 @@ final class HypnosStore {
         }
     }
 
-    func list() throws -> [HypnosRecording] {
+    func list() throws -> [VokiriRecording] {
         try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "json" }
-            .map { try JSONDecoder().decode(HypnosRecording.self, from: Data(contentsOf: $0)) }
+            .map { try JSONDecoder().decode(VokiriRecording.self, from: Data(contentsOf: $0)) }
             .sorted { $0.createdAt > $1.createdAt }
     }
 

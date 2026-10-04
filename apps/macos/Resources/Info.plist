@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleDisplayName</key><string>Vokiri</string>
+<key>NSMicrophoneUsageDescription</key><string>Vokiri records your microphone and sends the recording to your configured Vokiri server after you stop.</string>
+<key>NSAppleEventsUsageDescription</key><string>Vokiri can paste the final transcript into your active text document.</string>
+<key>LSUIElement</key><false/>
+<key>SUEnableAutomaticChecks</key><false/>
+<key>SUEnableInstallerLauncherService</key><false/>
+</dict></plist>

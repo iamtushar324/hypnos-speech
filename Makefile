@@ -153,3 +153,13 @@ help:
 	@echo "  all                Run full build process (default)"
 	@echo "  clean              Remove build artifacts"
 	@echo "  help               Show this help message"
+
+# Vokiri monorepo targets (stock upstream targets above remain available).
+.PHONY: vokiri test-vokiri server
+vokiri:
+	./scripts/build-vokiri.sh
+test-vokiri:
+	swift test
+	cd server && go test -race ./... && go vet ./...
+server:
+	cd server && go build -o vokirid ./cmd/vokirid

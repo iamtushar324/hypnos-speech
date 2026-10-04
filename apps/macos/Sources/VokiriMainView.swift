@@ -1,10 +1,10 @@
-#if HYPNOS_SPEECH
+#if VOKIRI
 import AppKit
 import SwiftUI
 
-/// VoiceInk's actual sidebar, window geometry, hero, theme and controls, with Hypnos-owned data.
-struct HypnosMainView: View {
-    @ObservedObject var controller: HypnosController
+/// VoiceInk's actual sidebar, window geometry, hero, theme and controls, with Vokiri-owned data.
+struct VokiriMainView: View {
+    @ObservedObject var controller: VokiriController
     @State private var selectedView: ViewType = .dashboard
 
     var body: some View {
@@ -28,57 +28,57 @@ struct HypnosMainView: View {
         case .dashboard:
             dashboard
         case .transcribeAudio:
-            HypnosPage(title: "Transcribe") {
+            VokiriPage(title: "Transcribe") {
                 CompactHeroSection(icon: "waveform.path", title: "Record, then transcribe",
-                    description: "Capture fresh audio on this Mac. Hypnos returns the final text after you stop.")
-                HypnosCaptureCard(controller: controller)
+                    description: "Capture fresh audio on this Mac. Vokiri returns the final text after you stop.")
+                VokiriCaptureCard(controller: controller)
                 setupCard
             }
         case .history:
-            HypnosHistoryView(controller: controller)
+            VokiriHistoryView(controller: controller)
         case .models:
-            HypnosConnectionView(controller: controller)
+            VokiriConnectionView(controller: controller)
         case .audio, .settings:
-            HypnosPreferencesView(controller: controller, audioOnly: selectedView == .audio)
+            VokiriPreferencesView(controller: controller, audioOnly: selectedView == .audio)
         case .modes:
             serverPage(title: "Modes", icon: "sparkles.square.fill.on.square",
-                description: "Hypnos handles cleanup, translation, and profiles. This Mac uses the server’s final output.")
+                description: "Vokiri handles cleanup, translation, and profiles. This Mac uses the server’s final output.")
         case .dictionary:
             serverPage(title: "Dictionary", icon: "text.book.closed.fill",
-                description: "Manage names, dictionary entries, and snippets on Hypnos. They apply on the server before final text reaches this Mac.")
+                description: "Manage names, dictionary entries, and snippets on Vokiri. They apply on the server before final text reaches this Mac.")
         case .license:
-            HypnosPage(title: "Hypnos Speech") {
-                CompactHeroSection(icon: "waveform", title: "Hypnos Speech",
-                    description: "A native VoiceInk fork connected to your Hypnos speech gateway.")
+            VokiriPage(title: "Vokiri") {
+                CompactHeroSection(icon: "waveform", title: "Vokiri",
+                    description: "A native VoiceInk fork connected to your Vokiri speech gateway.")
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Based on VoiceInk v2.21 by Pax. Licensed under GNU GPLv3.")
-                    Text("Native recording, hotkeys, Keychain, recording indicator, and paste come from VoiceInk. Hypnos owns transcription and cleanup.")
-                    Link("Source and upstream history", destination: URL(string: "https://github.com/iamtushar324/hypnos-speech")!)
+                    Text("Native recording, hotkeys, Keychain, recording indicator, and paste come from VoiceInk. Vokiri owns transcription and cleanup.")
+                    Link("Source and upstream history", destination: URL(string: "https://github.com/iamtushar324/vokiri")!)
                     Text("Updates are installed by building this fork. Stock VoiceInk binary updates are disabled.")
                         .font(.caption).foregroundStyle(.secondary)
-                }.hypnosCard()
+                }.vokiriCard()
             }
         }
     }
 
     private var dashboard: some View {
-        HypnosPage(title: "Dashboard") {
-            DashboardHeroCard(isLocked: false, headline: .hypnos,
-                subtext: "Use your shortcut to record. Stop to send to Hypnos and paste the final text.",
+        VokiriPage(title: "Dashboard") {
+            DashboardHeroCard(isLocked: false, headline: .vokiri,
+                subtext: "Use your shortcut to record. Stop to send to Vokiri and paste the final text.",
                 actionTitle: "\(controller.recordButtonTitle)",
                 actionIcon: controller.recordingState == .recording ? "stop.fill" : "mic.fill",
                 canViewInsights: !controller.busy || controller.recordingState == .recording,
-                actionHelp: "Record with the configured microphone and Hypnos gateway",
+                actionHelp: "Record with the configured microphone and Vokiri gateway",
                 actionAccessibilityLabel: "Start or stop recording", reviewCorrectionCount: nil,
                 onViewInsights: { Task { await controller.toggle() } }, onReviewCorrections: {})
-            HypnosCaptureCard(controller: controller)
+            VokiriCaptureCard(controller: controller)
             setupCard
             HStack(spacing: DashboardLayout.columnSpacing) {
                 metric(title: "Transcriptions", value: "\(controller.history.filter { $0.status == .completed }.count)", icon: "doc.text.fill")
                 metric(title: "Kept for retry", value: "\(controller.history.filter { $0.status == .failed || $0.status == .canceled }.count)", icon: "arrow.clockwise")
             }
             HStack {
-                Text("Hypnos final-output mode").font(.caption).foregroundStyle(.secondary)
+                Text("Vokiri final-output mode").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 AppActionButton("View History") { selectedView = .history }
                 AppActionButton("Settings") { selectedView = .settings }
@@ -109,7 +109,7 @@ struct HypnosMainView: View {
             }
             readinessRow("Global hotkey", ready: controller.hotkeyAvailable,
                 detail: controller.readiness.hotkeyStatus) { controller.refreshHotkey() }
-        }.hypnosCard()
+        }.vokiriCard()
     }
 
     private func readinessRow(_ title: String, ready: Bool, detail: String, action: @escaping () -> Void) -> some View {
@@ -131,22 +131,22 @@ struct HypnosMainView: View {
             }
             Spacer()
             Image(systemName: icon).font(.system(size: 24)).foregroundStyle(.secondary)
-        }.hypnosCard().frame(maxWidth: .infinity)
+        }.vokiriCard().frame(maxWidth: .infinity)
     }
 
     private func serverPage(title: LocalizedStringKey, icon: String, description: LocalizedStringKey) -> some View {
-        HypnosPage(title: title) {
-            CompactHeroSection(icon: icon, title: "Managed on Hypnos", description: description)
+        VokiriPage(title: title) {
+            CompactHeroSection(icon: icon, title: "Managed on Vokiri", description: description)
             HStack {
                 Spacer()
-                Link("Open Hypnos settings", destination: URL(string: "https://speech.tusharbhardwaj.space/")!)
+                Link("Open Vokiri settings", destination: URL(string: "https://speech.tusharbhardwaj.space/")!)
                 Spacer()
-            }.hypnosCard()
+            }.vokiriCard()
         }
     }
 }
 
-private struct HypnosPage<Content: View>: View {
+private struct VokiriPage<Content: View>: View {
     let title: LocalizedStringKey
     @ViewBuilder let content: () -> Content
     var body: some View {
@@ -163,14 +163,14 @@ private struct HypnosPage<Content: View>: View {
 }
 
 private extension View {
-    func hypnosCard() -> some View {
+    func vokiriCard() -> some View {
         padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(AppCardBackground(cornerRadius: DashboardLayout.cardCornerRadius))
     }
 }
 
-private struct HypnosCaptureCard: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriCaptureCard: View {
+    @ObservedObject var controller: VokiriController
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
@@ -207,26 +207,26 @@ private struct HypnosCaptureCard: View {
                     Text("Five-second local check").font(.caption).foregroundStyle(.secondary)
                 }
             }
-        }.hypnosCard()
+        }.vokiriCard()
     }
 }
 
-private struct HypnosConnectionView: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriConnectionView: View {
+    @ObservedObject var controller: VokiriController
     @State private var key = ""
     var body: some View {
         VStack(spacing: 0) {
             AppScreenHeader(title: "AI Models")
             Form {
-                Section("Hypnos Gateway") {
-                    LabeledContent("Provider") { Text("Hypnos · final output") }
+                Section("Vokiri Gateway") {
+                    LabeledContent("Provider") { Text("Vokiri · final output") }
                     TextField("Endpoint", text: $controller.configuration.endpoint)
                     TextField("Model", text: $controller.configuration.model)
                     TextField("Profile ID (optional)", text: $controller.configuration.profileID)
                 }
                 Section {
                     SecureField(controller.hasDeviceKey ? "Replace key (blank keeps saved key)" : "Dedicated Mac speech-only key", text: $key)
-                        .privacySensitive().accessibilityIdentifier("hypnos-device-key")
+                        .privacySensitive().accessibilityIdentifier("vokiri-device-key")
                     LabeledContent("Device key") {
                         Label(controller.hasDeviceKey ? "Saved in Keychain" : "Not configured",
                             systemImage: controller.hasDeviceKey ? "checkmark.circle.fill" : "exclamationmark.circle")
@@ -245,7 +245,7 @@ private struct HypnosConnectionView: View {
                     Text("Enter the dedicated key here, never in chat. It stays in this app’s macOS Keychain namespace.")
                 }
                 Section("Batch Transcription") {
-                    Text("Keep Tailscale connected. Audio is sent after recording stops. Hypnos handles transcription, dictionary, snippets, and cleanup.")
+                    Text("Keep Tailscale connected. Audio is sent after recording stops. Vokiri handles transcription, dictionary, snippets, and cleanup.")
                     Text("The final server text is saved and pasted exactly, including Markdown and paragraph breaks.")
                 }
                 Section { Text(controller.status).textSelection(.enabled) }
@@ -254,8 +254,8 @@ private struct HypnosConnectionView: View {
     }
 }
 
-private struct HypnosPreferencesView: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriPreferencesView: View {
+    @ObservedObject var controller: VokiriController
     let audioOnly: Bool
     @AppStorage("restoreClipboardAfterPaste") private var restoreClipboard = true
     var body: some View {
@@ -301,10 +301,10 @@ private struct HypnosPreferencesView: View {
     }
 }
 
-private struct HypnosHistoryView: View {
-    @ObservedObject var controller: HypnosController
+private struct VokiriHistoryView: View {
+    @ObservedObject var controller: VokiriController
     var body: some View {
-        HypnosPage(title: "History") {
+        VokiriPage(title: "History") {
             Text("Failed and canceled audio stays on this Mac for explicit retry. Paste saved text without uploading again.")
                 .font(.callout).foregroundStyle(.secondary)
             if controller.history.isEmpty {
@@ -331,7 +331,7 @@ private struct HypnosHistoryView: View {
                             AppActionButton("Paste Saved Text") { controller.pasteSaved(record) }.disabled(controller.busy)
                         }
                     }
-                }.hypnosCard()
+                }.vokiriCard()
             }
             AppActionButton("Show Private Recordings in Finder") {
                 let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

@@ -1,125 +1,55 @@
-# Hypnos Speech
+# Vokiri
 
-A native macOS capture client and self-hosted speech gateway. Forked from VoiceInk **v2.21**, preserving GPLv3 and upstream history.
+**Your voice, across your apps.** A lean native Mac dictation client and a self-hosted speech server, together in one monorepo.
 
-**Global hotkey → record microphone → Hypnos → paste final text.** The server owns models, dictionary, snippets and optional cleanup; the Mac preserves the returned text exactly.
+Press a shortcut, speak, and stop. Vokiri sends the fresh recording to your server and pastes its final text exactly. The server manages transcription models, dictionary, snippets, profiles, cleanup, device keys, and encrypted history.
 
-- [Mac setup, build, storage, validation and upstream updates](HYPNOS.md)
-- [Gateway setup and build](server/README.md) · [API contract](server/API.md)
-- Build the Mac app: `./scripts/build-hypnos.sh`
-- Test the Mac core: `swift test`
-- Test/build the server: `cd server && go test -race ./... && go build ./cmd/speechd`
+## Repository
 
-The upstream project and documentation follow below. Its stock build commands build VoiceInk; use the Hypnos build command above for this fork.
+| Path | Purpose |
+| --- | --- |
+| `apps/macos/` | Native Swift client, resources, and core tests |
+| `server/` | Go speech gateway, embedded web administration, and API adapters |
+| `scripts/` | Mac build, installation, and artwork generation |
+| `VoiceInk/`, `VoiceInk.xcodeproj/` | Preserved upstream source for reviewed merges |
 
----
+Future first-party clients belong under `apps/<platform>/` and use the same server API. The existing Diction iPhone integration is a server adapter; the Diction app itself is a separate project.
 
-<div align="center">
-  <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
-  <h1>VoiceInk</h1>
-  <p>Voice to text app for macOS to transcribe what you say to text almost instantly</p>
+## Get started
 
-  [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-  ![Platform](https://img.shields.io/badge/platform-macOS%2015.0%2B-brightgreen)
-  [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Beingpax/VoiceInk)](https://github.com/Beingpax/VoiceInk/releases)
-  ![GitHub all releases](https://img.shields.io/github/downloads/Beingpax/VoiceInk/total)
-  ![GitHub stars](https://img.shields.io/github/stars/Beingpax/VoiceInk?style=social)
-  <p>
-    <a href="https://tryvoiceink.com">Website</a> •
-    <a href="https://www.youtube.com/@tryvoiceink">YouTube</a>
-  </p>
-
-  <a href="https://tryvoiceink.com">
-    <img src="https://img.shields.io/badge/Download%20Now-Latest%20Version-blue?style=for-the-badge&logo=apple" alt="Download VoiceInk" width="250"/>
-  </a>
-</div>
-
----
-
-VoiceInk is a native macOS application that transcribes what you say to text almost instantly. You can find all the information and download the app from [here](https://tryvoiceink.com). 
-
-![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
-
-After dedicating the past 5 months to developing this app, I've decided to open source it for the greater good. 
-
-My goal is to make it **the most efficient and privacy-focused voice-to-text solution for macOS** that is a joy to use. While the source code is now open for experienced developers to build and contribute, purchasing a license helps support continued development and gives you access to automatic updates, priority support, and upcoming features.
-
-## Features
-
-- 🎙️ **Accurate Transcription**: Local AI models that transcribe your voice to text with 99% accuracy, almost instantly
-- 🔒 **Privacy First**: 100% offline processing ensures your data never leaves your device
-- ⚡ **Modes**: Intelligent app detection automatically applies your perfect pre-configured settings based on the app/ URL you're on
-- 🧠 **Context Aware**: Smart AI that understands your screen content and adapts to the context
-- 🎯 **Global Shortcuts**: Configurable keyboard or mouse shortcuts for quick recording and push-to-talk functionality
-- 📝 **Personal Dictionary**: Train the AI to understand your unique terminology with custom words, industry terms, and smart text replacements
-- 🔄 **Smart Modes**: Instantly switch between AI-powered modes optimized for different writing styles and contexts
-- 🤖 **AI Assistant**: Built-in voice assistant mode for a quick chatGPT like conversational assistant
-
-## Get Started
-
-### Download
-Get the latest version with a free trial from [tryvoiceink.com](https://tryvoiceink.com). Your purchase helps me work on VoiceInk full-time and continuously improve it with new features and updates.
-
-#### Homebrew
-Alternatively, you can install VoiceInk via `brew`:
-
-```shell
-brew install --cask voiceink
+```sh
+git clone https://github.com/iamtushar324/vokiri.git
+cd vokiri
+./scripts/build-vokiri.sh
+open "$HOME/Applications/Vokiri.app"
 ```
 
-### Build from Source
-As an open-source project, you can build VoiceInk yourself by following the instructions in [BUILDING.md](BUILDING.md). However, the compiled version includes additional benefits like automatic updates, priority support via Discord and email, and helps fund ongoing development.
+Requires macOS 15+, Xcode and Python 3. Configure a dedicated speech-only device key in the app. Default shortcut: **Control–Option–Space**. [Mac setup and privacy details](VOKIRI.md).
 
-## Requirements
+Build and test both components:
 
-- macOS 15.0 or later
+```sh
+swift test
+cd server
+go test -race ./...
+go vet ./...
+go build -o vokirid ./cmd/vokirid
+```
 
-## Documentation
+The server requires Go 1.26+, private persistent storage, authentication and provider configuration. See [server setup](server/README.md) and the [API contract](server/API.md). The [Dockerfile](server/Dockerfile) uses `server/` as its build context. Building does not deploy automatically.
 
-- [Building from Source](BUILDING.md) - Detailed instructions for building the project
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to VoiceInk
-- [Code of Conduct](CODE_OF_CONDUCT.md) - Our community standards
+## Design
 
-## Contributing
+- Native recording, hotkeys, Keychain, recording indicator and paste; no local model downloads or inference frameworks.
+- Only fresh recorded audio and speech request fields leave the Mac. No clipboard, selection or screen uploads.
+- The returned text is final: no local rewriting, dictionary replacements or hidden enhancement.
+- Failed and canceled recordings stay local for explicit retry. Saved text can be pasted again without re-upload.
+- Runtime keys, recordings, personal prompts and deployment state stay outside this public repository.
 
-This project is **not accepting pull requests** at this time. You're welcome to fork and modify VoiceInk for your own use.
+Vokiri replaces the earlier Hypnos Speech product name. Existing Mac security/storage identifiers, server encryption formats, environment variables and endpoints remain compatible so the rename preserves keys and history. See [migration details](VOKIRI.md#upgrading-from-hypnos-speech) and [validation](VALIDATION.md).
 
-You can still contribute by:
-- Reporting bugs via [issues](https://github.com/Beingpax/VoiceInk/issues)
-- Suggesting features or enhancements
-- Improving documentation via issues
+## Upstream and license
 
-For more details, see our [Contributing Guidelines](CONTRIBUTING.md). For build instructions, see our [Building Guide](BUILDING.md).
+Vokiri is a genuine fork of [VoiceInk by Pax](https://github.com/Beingpax/VoiceInk), based on **v2.21** (`640b0c8`). The original native components, copyright and [GPLv3 license](LICENSE) are retained. Vokiri development uses the `vokiri` branch. The stock VoiceInk target remains available for upstream review; use the Vokiri build script for this app.
 
-## License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-If you encounter any issues or have questions, please:
-1. Check the existing issues in the GitHub repository
-2. Create a new issue if your problem isn't already reported
-3. Provide as much detail as possible about your environment and the problem
-
-## Acknowledgments
-
-### Core Technology
-- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - High-performance inference of OpenAI's Whisper model
-- [FluidAudio](https://github.com/FluidInference/FluidAudio) - Used for Parakeet model implementation
-- [TranscribeCpp for Swift](https://github.com/Beingpax/Transcribe-cpp-swift) - SwiftPM distribution of [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp), used for local GGUF transcription models
-- [SenseVoice Small](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) by FunAudioLLM / Alibaba - Multilingual model available under the [FunASR Model Open Source License Agreement](https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE)
-
-### Essential Dependencies
-- [Sparkle](https://github.com/sparkle-project/Sparkle) - Keeping VoiceInk up to date
-- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) - User-customizable keyboard shortcuts
-- [LaunchAtLogin](https://github.com/sindresorhus/LaunchAtLogin) - Launch at login functionality
-- [MediaRemoteAdapter](https://github.com/ejbills/mediaremote-adapter) - Media playback control during recording
-- [Zip](https://github.com/marmelroy/Zip) - File compression and decompression utilities
-- [SelectedTextKit](https://github.com/tisfeng/SelectedTextKit) - A modern macOS library for getting selected text
-- [Swift Atomics](https://github.com/apple/swift-atomics) - Low-level atomic operations for thread-safe concurrent programming
-
-
----
-
-Made with ❤️ by Pax
+The server was initially imported from a separately maintained gateway at `ff81e39`; its maintained source now lives in `server/`. Private deployment history was not imported. Read [contribution guidance](CONTRIBUTING.md) before changing either component.

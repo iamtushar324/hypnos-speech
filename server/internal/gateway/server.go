@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"hypnos.local/speech/internal/auth"
+	"github.com/iamtushar324/vokiri/server/internal/auth"
 )
 
 const (
@@ -88,7 +88,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			methodNotAllowed(w)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"service_name": "Hypnos Speech", "public_url": s.cfg.PublicURL, "clerk": map[string]string{"publishable_key": s.cfg.ClerkPublishableKey, "frontend_api": s.cfg.ClerkFrontendAPI}, "diction": map[string]string{"endpoint": s.cfg.DictionPublicURL}})
+		writeJSON(w, http.StatusOK, map[string]any{"service_name": "Vokiri", "public_url": s.cfg.PublicURL, "clerk": map[string]string{"publishable_key": s.cfg.ClerkPublishableKey, "frontend_api": s.cfg.ClerkFrontendAPI}, "diction": map[string]string{"endpoint": s.cfg.DictionPublicURL}})
 		return
 	}
 	if r.URL.Path == "/v1/audio/stream" {

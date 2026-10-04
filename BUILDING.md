@@ -1,3 +1,9 @@
+# Building Vokiri
+
+Use `./scripts/build-vokiri.sh` or `make vokiri` for the Mac app. See [VOKIRI.md](VOKIRI.md) for setup and [server/README.md](server/README.md) for the gateway. `make test-vokiri` checks both components.
+
+The following instructions are retained for the stock upstream VoiceInk target.
+
 # Building VoiceInk
 
 ## Requirements

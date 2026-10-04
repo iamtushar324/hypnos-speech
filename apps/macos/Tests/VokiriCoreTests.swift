@@ -1,5 +1,5 @@
 import XCTest
-@testable import HypnosSpeechCore
+@testable import VokiriCore
 
 private final class MockURLProtocol: URLProtocol {
     static var handler: ((URLRequest) throws -> (Int, Data))?
@@ -16,23 +16,23 @@ private final class MockURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-private final class ControlledClient: HypnosTranscribing {
+private final class ControlledClient: VokiriTranscribing {
     var calls = 0
     var result: Result<String, Error> = .success("text")
     var continuation: CheckedContinuation<String, Error>?
     var suspend = false
-    func transcribe(audioURL: URL, configuration: HypnosConfiguration, key: String) async throws -> String {
+    func transcribe(audioURL: URL, configuration: VokiriConfiguration, key: String) async throws -> String {
         calls += 1
         if suspend { return try await withCheckedThrowingContinuation { continuation = $0 } }
         return try result.get()
     }
 }
 
-final class HypnosCoreTests: XCTestCase {
-    private let exact = " \n# Hypnos [keep this]\n\n- Tushar — नमस्ते 👋\n\n```swift\nlet café = \"[yes]\"\n  print(café)\n```\n\nTrailing spaces  \n"
+final class VokiriCoreTests: XCTestCase {
+    private let exact = " \n# Vokiri [keep this]\n\n- Tushar — नमस्ते 👋\n\n```swift\nlet café = \"[yes]\"\n  print(café)\n```\n\nTrailing spaces  \n"
 
     func testSetupBlockersAndHotkeyReadiness() throws {
-        var ready = HypnosReadiness(deviceKeyConfigured: true, microphoneGranted: true,
+        var ready = VokiriReadiness(deviceKeyConfigured: true, microphoneGranted: true,
                                     accessibilityGranted: true, hotkeyInstalled: true)
         XCTAssertNil(ready.recordingBlocker)
         ready.microphoneGranted = false
@@ -48,9 +48,9 @@ final class HypnosCoreTests: XCTestCase {
 
     func testMultipartOnlyApprovedFieldsAndBearerAuthentication() throws {
         let audio = Data(repeating: 65, count: 100)
-        let (request, body) = try HypnosClient.request(audio: audio, configuration: HypnosConfiguration(), key: "unit-test-placeholder", boundary: "TestBoundary")
+        let (request, body) = try VokiriClient.request(audio: audio, configuration: VokiriConfiguration(), key: "unit-test-placeholder", boundary: "TestBoundary")
         XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.url?.absoluteString, HypnosConfiguration.defaultEndpoint)
+        XCTAssertEqual(request.url?.absoluteString, VokiriConfiguration.defaultEndpoint)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer unit-test-placeholder")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "multipart/form-data; boundary=TestBoundary")
         let multipart = String(decoding: body, as: UTF8.self)
@@ -62,37 +62,37 @@ final class HypnosCoreTests: XCTestCase {
         for name in ["language", "profile_id", "prompt", "context", "clipboard", "selected_text", "temperature", "dictionary"] {
             XCTAssertFalse(multipart.contains("name=\"\(name)\""), name)
         }
-        var config = HypnosConfiguration(); config.profileID = "mac-profile"
-        let (_, configured) = try HypnosClient.request(audio: audio, configuration: config, key: "test")
+        var config = VokiriConfiguration(); config.profileID = "mac-profile"
+        let (_, configured) = try VokiriClient.request(audio: audio, configuration: config, key: "test")
         XCTAssertTrue(String(decoding: configured, as: UTF8.self).contains("name=\"profile_id\"\r\n\r\nmac-profile\r\n"))
     }
 
     func testExactDecodeWithUnknownMetadata() throws {
         let data = try JSONSerialization.data(withJSONObject: ["text": exact, "metadata": ["anything": true], "duration": "unknown"])
-        XCTAssertEqual(Array(try HypnosClient.decode(data, status: 200).utf8), Array(exact.utf8))
+        XCTAssertEqual(Array(try VokiriClient.decode(data, status: 200).utf8), Array(exact.utf8))
     }
 
     func testInvalidEmptyAndAuthenticationResponses() throws {
         for input in ["{}", "{\"text\":null}", "{\"text\":12}", "[]", "invalid"] {
-            XCTAssertThrowsError(try HypnosClient.decode(Data(input.utf8), status: 200)) { XCTAssertEqual($0 as? HypnosError, .malformedResponse) }
+            XCTAssertThrowsError(try VokiriClient.decode(Data(input.utf8), status: 200)) { XCTAssertEqual($0 as? VokiriError, .malformedResponse) }
         }
         for text in ["", " \n\t"] {
             let data = try JSONSerialization.data(withJSONObject: ["text": text])
-            XCTAssertThrowsError(try HypnosClient.decode(data, status: 200)) { XCTAssertEqual($0 as? HypnosError, .emptyResponse) }
+            XCTAssertThrowsError(try VokiriClient.decode(data, status: 200)) { XCTAssertEqual($0 as? VokiriError, .emptyResponse) }
         }
-        XCTAssertThrowsError(try HypnosClient.decode(Data("sensitive error body".utf8), status: 401)) { XCTAssertEqual($0 as? HypnosError, .authentication) }
-        XCTAssertThrowsError(try HypnosClient.decode(Data(), status: 503)) { XCTAssertEqual($0 as? HypnosError, .http(503)) }
+        XCTAssertThrowsError(try VokiriClient.decode(Data("sensitive error body".utf8), status: 401)) { XCTAssertEqual($0 as? VokiriError, .authentication) }
+        XCTAssertThrowsError(try VokiriClient.decode(Data(), status: 503)) { XCTAssertEqual($0 as? VokiriError, .http(503)) }
     }
 
     func testRejectUnsafeEndpointKeyAndAudio() throws {
         for endpoint in ["http://example.com", "https://user:password@example.com", "https://example.com?key=test", "https://example.com/#fragment", "file:///tmp/audio"] {
-            var config = HypnosConfiguration(); config.endpoint = endpoint
+            var config = VokiriConfiguration(); config.endpoint = endpoint
             XCTAssertThrowsError(try config.validatedURL())
         }
         for key in ["", "bad\r\nInjected: true"] {
-            XCTAssertThrowsError(try HypnosClient.request(audio: Data(repeating: 0, count: 100), configuration: HypnosConfiguration(), key: key))
+            XCTAssertThrowsError(try VokiriClient.request(audio: Data(repeating: 0, count: 100), configuration: VokiriConfiguration(), key: key))
         }
-        XCTAssertThrowsError(try HypnosClient.request(audio: Data(), configuration: HypnosConfiguration(), key: "test"))
+        XCTAssertThrowsError(try VokiriClient.request(audio: Data(), configuration: VokiriConfiguration(), key: "test"))
     }
 
     func testActualURLSessionUploadAndTimeout() async throws {
@@ -100,7 +100,7 @@ final class HypnosCoreTests: XCTestCase {
         try Data(repeating: 1, count: 100).write(to: file)
         defer { try? FileManager.default.removeItem(at: file); MockURLProtocol.handler = nil }
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [MockURLProtocol.self]
-        let client = HypnosClient(session: URLSession(configuration: config))
+        let client = VokiriClient(session: URLSession(configuration: config))
         let expected = exact
         var calls = 0
         MockURLProtocol.handler = { request in
@@ -108,19 +108,19 @@ final class HypnosCoreTests: XCTestCase {
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-device")
             return (200, try JSONSerialization.data(withJSONObject: ["text": expected, "extra": true]))
         }
-        let text = try await client.transcribe(audioURL: file, configuration: HypnosConfiguration(), key: "test-device")
+        let text = try await client.transcribe(audioURL: file, configuration: VokiriConfiguration(), key: "test-device")
         XCTAssertEqual(text, expected); XCTAssertEqual(calls, 1)
         MockURLProtocol.handler = { _ in throw URLError(.timedOut) }
-        do { _ = try await client.transcribe(audioURL: file, configuration: HypnosConfiguration(), key: "test-device"); XCTFail() }
-        catch { XCTAssertEqual(error as? HypnosError, .timeout) }
+        do { _ = try await client.transcribe(audioURL: file, configuration: VokiriConfiguration(), key: "test-device"); XCTFail() }
+        catch { XCTAssertEqual(error as? VokiriError, .timeout) }
     }
 
     @MainActor func testPreservationThroughHistoryAndPaste() async throws {
         let store = try temporaryStore(); defer { cleanup(store) }
         let client = ControlledClient(); client.result = .success(exact)
-        let workflow = HypnosWorkflow(store: store, client: client)
+        let workflow = VokiriWorkflow(store: store, client: client)
         var pasted: String?
-        workflow.submit(try store.create(), configuration: HypnosConfiguration(), key: "test") { text, canceled in
+        workflow.submit(try store.create(), configuration: VokiriConfiguration(), key: "test") { text, canceled in
             XCTAssertFalse(canceled()); pasted = text; return true
         }
         await workflow.waitUntilSettled()
@@ -135,9 +135,9 @@ final class HypnosCoreTests: XCTestCase {
         let record = try store.create(), audio = Data(repeating: 2, count: 100)
         try audio.write(to: store.audioURL(record))
         let client = ControlledClient(); client.suspend = true
-        let workflow = HypnosWorkflow(store: store, client: client)
+        let workflow = VokiriWorkflow(store: store, client: client)
         var pasteCount = 0
-        workflow.submit(record, configuration: HypnosConfiguration(), key: "test") { _, _ in pasteCount += 1; return true }
+        workflow.submit(record, configuration: VokiriConfiguration(), key: "test") { _, _ in pasteCount += 1; return true }
         while client.continuation == nil { await Task.yield() }
         workflow.cancel(); client.continuation?.resume(returning: "late server text")
         await workflow.waitUntilSettled()
@@ -148,9 +148,9 @@ final class HypnosCoreTests: XCTestCase {
 
     @MainActor func testCancellationDuringPasteDelay() async throws {
         let store = try temporaryStore(); defer { cleanup(store) }
-        let workflow = HypnosWorkflow(store: store, client: ControlledClient())
+        let workflow = VokiriWorkflow(store: store, client: ControlledClient())
         var continuePaste: CheckedContinuation<Void, Never>?, pasted = false
-        workflow.submit(try store.create(), configuration: HypnosConfiguration(), key: "test") { _, canceled in
+        workflow.submit(try store.create(), configuration: VokiriConfiguration(), key: "test") { _, canceled in
             await withCheckedContinuation { continuePaste = $0 }
             if !canceled() { pasted = true }
             return pasted
@@ -165,16 +165,16 @@ final class HypnosCoreTests: XCTestCase {
         let store = try temporaryStore(); defer { cleanup(store) }
         let record = try store.create(), audio = Data(repeating: 3, count: 100)
         try audio.write(to: store.audioURL(record))
-        let client = ControlledClient(); client.result = .failure(HypnosError.authentication)
-        let workflow = HypnosWorkflow(store: store, client: client)
+        let client = ControlledClient(); client.result = .failure(VokiriError.authentication)
+        let workflow = VokiriWorkflow(store: store, client: client)
         var pasted: String?
-        workflow.submit(record, configuration: HypnosConfiguration(), key: "test") { text, _ in pasted = text; return true }
+        workflow.submit(record, configuration: VokiriConfiguration(), key: "test") { text, _ in pasted = text; return true }
         await workflow.waitUntilSettled()
         XCTAssertNil(pasted); XCTAssertEqual(client.calls, 1)
         XCTAssertEqual(try store.list().first?.status, .failed)
         XCTAssertEqual(try Data(contentsOf: store.audioURL(record)), audio)
         client.result = .success(exact)
-        workflow.submit(try XCTUnwrap(store.list().first), configuration: HypnosConfiguration(), key: "replacement") { text, _ in pasted = text; return true }
+        workflow.submit(try XCTUnwrap(store.list().first), configuration: VokiriConfiguration(), key: "replacement") { text, _ in pasted = text; return true }
         await workflow.waitUntilSettled()
         XCTAssertEqual(client.calls, 2); XCTAssertEqual(pasted, exact); XCTAssertEqual(try store.list().count, 1)
     }
@@ -182,11 +182,11 @@ final class HypnosCoreTests: XCTestCase {
     @MainActor func testPasteFailureKeepsTextWithoutAnotherUpload() async throws {
         let store = try temporaryStore(); defer { cleanup(store) }
         let client = ControlledClient()
-        let counted = HypnosWorkflow(store: store, client: client)
-        counted.submit(try store.create(), configuration: HypnosConfiguration(), key: "test") { _, _ in false }
+        let counted = VokiriWorkflow(store: store, client: client)
+        counted.submit(try store.create(), configuration: VokiriConfiguration(), key: "test") { _, _ in false }
         await counted.waitUntilSettled()
         XCTAssertEqual(client.calls, 1); XCTAssertEqual(try store.list().first?.status, .completed)
-        XCTAssertEqual(try store.list().first?.text, "text"); XCTAssertEqual(counted.state, .failed(HypnosError.paste.localizedDescription))
+        XCTAssertEqual(try store.list().first?.text, "text"); XCTAssertEqual(counted.state, .failed(VokiriError.paste.localizedDescription))
     }
 
     func testPrivateStorageAndInterruptedRecovery() throws {
@@ -197,8 +197,8 @@ final class HypnosCoreTests: XCTestCase {
         try store.recoverInterrupted(); XCTAssertEqual(try store.list().first?.status, .failed)
     }
 
-    private func temporaryStore() throws -> HypnosStore {
-        try HypnosStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("hypnos-tests-\(UUID())/Recordings"))
+    private func temporaryStore() throws -> VokiriStore {
+        try VokiriStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("vokiri-tests-\(UUID())/Recordings"))
     }
-    private func cleanup(_ store: HypnosStore) { try? FileManager.default.removeItem(at: store.root.deletingLastPathComponent()) }
+    private func cleanup(_ store: VokiriStore) { try? FileManager.default.removeItem(at: store.root.deletingLastPathComponent()) }
 }

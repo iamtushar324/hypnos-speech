@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"hypnos.local/speech/internal/auth"
+	"github.com/iamtushar324/vokiri/server/internal/auth"
 )
 
 func testServer(t *testing.T) *Server {

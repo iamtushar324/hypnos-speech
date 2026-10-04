@@ -104,7 +104,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Hypnos generated project, build/test output, runtime/credentials
+# Vokiri generated project, build/test output, runtime/credentials
 HypnosSpeech.xcodeproj/
 .hypnos-build/
 .hypnos-validation/
@@ -116,6 +116,12 @@ HypnosSpeech.xcodeproj/
 state/
 Recordings/
 __pycache__/
-server/speechd
+server/vokirid
 .hypnos-native/
 .hypnos-native-build/
+
+# Vokiri generated native target
+Vokiri.xcodeproj/
+.vokiri-native/
+.vokiri-native-build/
+.vokiri-validation/

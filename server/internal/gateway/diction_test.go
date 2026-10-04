@@ -40,7 +40,7 @@ func TestDictionPublicDiscoveryAndPairingKey(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp.Body.Close()
-		if path == "/health" && body["version"] != "hypnos-speech/"+version {
+		if path == "/health" && body["version"] != "vokiri/"+version {
 			t.Fatalf("unexpected health: %#v", body)
 		}
 		if path == "/v1/models" {

@@ -1,8 +1,8 @@
-# Hypnos Speech gateway
+# Vokiri gateway
 
 The Go gateway embeds the responsive administration UI and serves batch speech APIs, device-key management, dictionary/snippets, profiles, encrypted history, and optional server-side cleanup. The Mac client uses `POST /v1/audio/transcriptions`; Groq transcription produces final text after recording stops.
 
-This is a reviewed source snapshot of the existing gateway at commit `ff81e39`. Private Git history, deployment manifests, personal cleanup prompt/dictionary, recordings, state, credentials, and machine-specific operational scripts are excluded. Configure your own prompt in the administration UI; [a generic example](prompts/example-cleanup.txt) is included. Existing encrypted deployment state is not changed by this source import.
+This is the maintained Vokiri server, initially imported from the existing gateway at commit `ff81e39`. Future server changes belong here alongside the clients, not in a separate source repository. Private Git history, deployment manifests, personal cleanup prompt/dictionary, recordings, state, credentials, and machine-specific operational scripts are excluded. Configure your own prompt in the administration UI; [a generic example](prompts/example-cleanup.txt) is included. Existing encrypted deployment state is not changed by this source import.
 
 ## Build and test
 
@@ -12,7 +12,7 @@ From this directory, with Go 1.26+:
 go test -race ./...
 go vet ./...
 node --check web/app.js
-CGO_ENABLED=0 go build -trimpath -o /tmp/speechd ./cmd/speechd
+CGO_ENABLED=0 go build -trimpath -o /tmp/vokirid ./cmd/vokirid
 ```
 
 On Linux/Hypnos, build this same `server/` directory in a checkout of the repository. No macOS dependencies are involved. A [Dockerfile](Dockerfile) is provided; build with `server/` as the context. Do not bake configuration, state, or credentials into an image.
@@ -46,3 +46,9 @@ See [API.md](API.md) for schemas and authentication boundaries. Personal runtime
 ## Rollback
 
 Builds do not deploy automatically. Keep the previous binary/image and retained state/master key. Reverting source does not revoke device keys or remove history. Revoke a lost Mac key through admin; do not delete production state to roll back a client build.
+
+## Upgrade compatibility
+
+The Vokiri rename preserves the `SPEECH_*` configuration contract, API routes, device key hashes, serialized state and audio formats. The AES-GCM associated-data identifiers retain their original `hypnos-speech-*` values: changing them would make existing encrypted state unreadable. Keep your existing state directory, master key, origin and Clerk configuration when deploying this source. The binary is now `vokirid`; update the service executable/image entrypoint, not the data.
+
+For Linux hosts using local containerd, `scripts/build-image.py` packages a static Linux/amd64 binary and the host CA bundle into an OCI archive without a registry push. Production manifests, runtime keys and backups remain deployment-owned.

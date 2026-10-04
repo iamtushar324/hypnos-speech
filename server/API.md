@@ -1,8 +1,8 @@
-# Hypnos Speech API implementation contract
+# Vokiri API implementation contract
 
 One Go process embeds `web/` and serves the administration application and speech APIs.
 Production origin: https://speech.tusharbhardwaj.space. Private Tailscale ingress.
-Module: hypnos.local/speech. The server/ directory owns go.mod/go.sum and cmd/speechd; runtime credentials and deployment configuration remain outside this repository.
+Module: github.com/iamtushar324/vokiri/server. The server/ directory owns go.mod/go.sum and cmd/vokirid; runtime credentials and deployment configuration remain outside this repository.
 
 ## Authentication boundary
 

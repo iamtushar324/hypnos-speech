@@ -1,0 +1,2 @@
+#include "../../../LocalBuild.xcconfig"
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) LOCAL_BUILD VOKIRI

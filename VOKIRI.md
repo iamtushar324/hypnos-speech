@@ -1,17 +1,17 @@
-# Hypnos Speech for macOS
+# Vokiri for macOS
 
-A personal batch capture client based on [VoiceInk](https://github.com/Beingpax/VoiceInk) v2.21, commit **`640b0c8c36ee74d9e76d930f40e2c04bb739b4b3`**. GPLv3 and Pax's upstream attribution are retained. The root repository remains a genuine VoiceInk fork; `server/` contains the reviewed gateway source snapshot. Nothing from the personal vault is published.
+A personal batch capture client based on [VoiceInk](https://github.com/Beingpax/VoiceInk) v2.21, commit **`640b0c8c36ee74d9e76d930f40e2c04bb739b4b3`**. GPLv3 and Pax's upstream attribution are retained. The root repository remains a genuine VoiceInk fork; `server/` contains the maintained gateway source. Nothing from the personal vault is published.
 
 ## Setup
 
 1. Use macOS 15+, keep Tailscale connected, and build as described below.
-2. Open `~/Applications/Hypnos Speech.app`. In **AI Models**, confirm the HTTPS endpoint and model. The app reuses VoiceInk's sidebar, dashboard hero, native theme, and settings controls.
+2. Open `~/Applications/Vokiri.app`. In **AI Models**, confirm the HTTPS endpoint and model. The app reuses VoiceInk's sidebar, dashboard hero, native theme, and settings controls.
 3. Sign in to `https://speech.tusharbhardwaj.space/#keys`, create a **dedicated Mac speech-only device key**, and enter it directly into the app's **secure device key field**. Save settings. Never put a key in chat, source, screenshots, shell commands, or documentation. Blank replacement input preserves the saved key.
-4. Use the Dashboard **Set Up** buttons or Settings **Grant Microphone** and **Grant Accessibility**. In macOS System Settings → Privacy & Security, enable Hypnos Speech for those permissions. Accessibility is used for the hotkey and Command-V paste. Screen Recording permission is not needed. The Dashboard shows each blocker; idle/blocked states never claim to be recording.
+4. Use the Dashboard **Set Up** buttons or Settings **Grant Microphone** and **Grant Accessibility**. In macOS System Settings → Privacy & Security, enable Vokiri for those permissions. Accessibility is used for the hotkey and Command-V paste. Screen Recording permission is not needed. The Dashboard shows each blocker; idle/blocked states never claim to be recording.
 5. Default hotkey: **Control–Option–Space**, independent of Handy's right-side modifiers. Press to start/stop. Enable **Push to talk** to hold/release, or record another shortcut using VoiceInk's shortcut recorder. After granting permissions, use **Refresh hotkey** if needed.
-6. Focus a disposable plain-text document and make a short fresh recording. Stop, wait for Hypnos processing, and compare the document against the exact saved text. Never upload existing app history to test this integration.
+6. Focus a disposable plain-text document and make a short fresh recording. Stop, wait for Vokiri processing, and compare the document against the exact saved text. Never upload existing app history to test this integration.
 
-Default endpoint: `https://speech.tusharbhardwaj.space/v1/audio/transcriptions`. Default model: `whisper-large-v3-turbo`. Profile ID is optional. Language is omitted for automatic detection. Hypnos controls dictionary, snippets, and cleanup.
+Default endpoint: `https://speech.tusharbhardwaj.space/v1/audio/transcriptions`. Default model: `whisper-large-v3-turbo`. Profile ID is optional. Language is omitted for automatic detection. Vokiri controls dictionary, snippets, and cleanup.
 
 Microphone recordings are WAV, mono 16 kHz PCM16, using VoiceInk's native Core Audio recorder. Upload begins only after capture has stopped. No partial transcript or streaming recognition is displayed.
 
@@ -19,19 +19,19 @@ The native floating indicator and Dashboard show VoiceInk's audio-reactive wavef
 
 ## Build and signing
 
-Install Xcode and its Command Line Tools, Git and Python 3. Read upstream [BUILDING.md](BUILDING.md) and [Makefile](Makefile). The Hypnos build follows upstream's Release + LocalBuild signing route but generates an ignored project with our own product/bundle identity:
+Install Xcode and its Command Line Tools, Git and Python 3. Read upstream [BUILDING.md](BUILDING.md) and [Makefile](Makefile). The Vokiri build follows upstream's Release + LocalBuild signing route but generates an ignored project with our own product/bundle identity:
 
 ```sh
-./scripts/build-hypnos.sh
-open "$HOME/Applications/Hypnos Speech.app"
+./scripts/build-vokiri.sh
+open "$HOME/Applications/Vokiri.app"
 ```
 
-Quit Hypnos Speech before installing an update. To build while using the installed app:
+Quit Vokiri before installing an update. To build while using the installed app:
 
 ```sh
-./scripts/build-hypnos.sh --build-only
-# Quit Hypnos Speech, then install the already verified build:
-./scripts/build-hypnos.sh --install-only
+./scripts/build-vokiri.sh --build-only
+# Quit Vokiri, then install the already verified build:
+./scripts/build-vokiri.sh --install-only
 ```
 
 The installer refuses to overwrite a running app. It stages and verifies a complete bundle, then replaces the closed installation; the previous bundle is retained under `~/Library/Caches/space.hypnos.speech.mac/BuildInstalls/` at the path printed by the script. Preferences, Keychain and recordings remain outside the bundle.
@@ -39,16 +39,22 @@ The installer refuses to overwrite a running app. It stages and verifies a compl
 The sole available Apple Development signing identity is selected automatically and retained in an ignored local file for subsequent builds. A missing saved identity stops the build rather than silently changing signing identity. Override with `LOCAL_CODESIGN_IDENTITY` set to the certificate's SHA-1 identifier from `security find-identity -v -p codesigning` when needed. For supported ad-hoc signing:
 
 ```sh
-LOCAL_CODESIGN_IDENTITY=- ./scripts/build-hypnos.sh
+LOCAL_CODESIGN_IDENTITY=- ./scripts/build-vokiri.sh
 ```
 
-Ad-hoc rebuilds may require granting permissions again. There is no security disabling or signing purchase. The script verifies the bundle signature before installing. It installs only to `~/Applications/Hypnos Speech.app`; it does not overwrite Handy or VoiceInk.
+Ad-hoc rebuilds may require granting permissions again. There is no security disabling or signing purchase. The script verifies the bundle signature before installing. It installs only to `~/Applications/Vokiri.app`; it does not overwrite Handy or VoiceInk.
 
-If macOS shows Accessibility **on** but the app remains blocked after changing from ad-hoc to developer signing, the displayed entry can still reference the old build's signing requirement. In Privacy & Security → Accessibility, remove only Hypnos Speech with **−**, add `~/Applications/Hypnos Speech.app` with **+**, enable it, and relaunch. Approve any macOS authentication locally. The app's **Show This App in Finder** button identifies the running bundle. Ordinary updates signed with the same retained developer identity preserve the signing requirement; the installer warns when it changes.
+If macOS shows Accessibility **on** but the app remains blocked after changing from ad-hoc to developer signing, the displayed entry can still reference the old build's signing requirement. In Privacy & Security → Accessibility, remove only Vokiri with **−**, add `~/Applications/Vokiri.app` with **+**, enable it, and relaunch. Approve any macOS authentication locally. The app's **Show This App in Finder** button identifies the running bundle. Ordinary updates signed with the same retained developer identity preserve the signing requirement; the installer warns when it changes.
 
-The generated Hypnos target compiles only VoiceInk's native capture/shortcut/Keychain/paste/UI primitives, our capture wrapper, and Swift Atomics **1.3.0**. Local-inference frameworks, model managers, Sparkle and the XPC inference helper are not linked or initialized. No model download or whisper.cpp build is required. This preserves compatibility with the installed Xcode 26.3 despite upstream's newer local-model package requirements.
+The generated Vokiri target compiles only VoiceInk's native capture/shortcut/Keychain/paste/UI primitives, our capture wrapper, and Swift Atomics **1.3.0**. Local-inference frameworks, model managers, Sparkle and the XPC inference helper are not linked or initialized. No model download or whisper.cpp build is required. This preserves compatibility with the installed Xcode 26.3 despite upstream's newer local-model package requirements.
 
-Build output: `.hypnos-native-build/Build/Products/Release/Hypnos Speech.app`. Generated project: `HypnosSpeech.xcodeproj`; generated native adapters: `.hypnos-native/` (both ignored). Regenerate after upstream updates. Upstream `make local` still builds stock VoiceInk.
+Build output: `.vokiri-native-build/Build/Products/Release/Vokiri.app`. Generated project: `Vokiri.xcodeproj`; generated native adapters: `.vokiri-native/` (both ignored). Regenerate after upstream updates. Upstream `make local` still builds stock VoiceInk.
+
+## Upgrading from Hypnos Speech
+
+The installer replaces `~/Applications/Hypnos Speech.app` with `~/Applications/Vokiri.app` and retains the previous bundle for rollback. Quit either app before installation. Both builds use the same bundle identifier and signing requirement; run only one at a time.
+
+The legacy `space.hypnos.speech.mac` bundle ID, Keychain service, private storage folders, and `HypnosEndpoint`, `HypnosModel`, `HypnosProfileID`, `HypnosPushToTalk` preference keys intentionally remain stable. They are compatibility identifiers, not the product name. The endpoint and device key are reused without copying secrets or uploading history. macOS may retain the old display label in its permission list; check the app's readiness indicators after launch.
 
 ## Separation and recording storage
 
@@ -69,14 +75,14 @@ HTTP authentication failures, non-2xx statuses, unavailable network/Tailscale, 9
 
 ## Focused patches and upstream updates
 
-Our implementation is additive in `VoiceInk/Hypnos/`, `HypnosSpeech/`, `HypnosTests/`, and `scripts/*hypnos*`. Only two upstream Swift files have hooks:
+Our implementation is additive in `apps/macos/Sources/`, `apps/macos/Resources/`, `apps/macos/Tests/`, and `scripts/*vokiri*`. Only two upstream Swift files have hooks:
 
-1. `KeychainService.swift`: separate namespace under `HYPNOS_SPEECH`.
+1. `KeychainService.swift`: separate namespace under `VOKIRI`.
 2. `CursorPaster.swift`: optional auto-learn suppression and cancellation guard, with original defaults preserved.
 
-The generator selects native source files and makes small, asserted adapters in ignored build sources: removes local auto-learn, upstream preference migrations, and model-mode lookups, routes shortcut validation alerts locally, extracts recording indicator widgets/window geometry/navigation types, and adds a truthful Hypnos headline to the original dashboard hero. Assertions stop the build if those upstream interfaces change. Upstream files remain intact.
+The generator selects native source files and makes small, asserted adapters in ignored build sources: removes local auto-learn, upstream preference migrations, and model-mode lookups, routes shortcut validation alerts locally, extracts recording indicator widgets/window geometry/navigation types, and adds a truthful Vokiri headline to the original dashboard hero. Assertions stop the build if those upstream interfaces change. Upstream files remain intact.
 
-The Hypnos app bypasses the upstream transcription pipeline entirely; its explicit final-output mode uses a separate tested workflow from response to history to paste. Native CoreAudioRecorder, ShortcutMonitor/ShortcutRecorder, MiniRecorderPanel/RecorderStatusDisplay, KeychainService, and CursorPaster are reused. AppSidebar, DashboardHeroCard, AppTheme, AppCardBackground, AppScreenHeader and native controls come from upstream source. Modes and Dictionary link to Hypnos rather than applying local cleanup. Settings do not expose upstream model downloads, screen capture, or update controls.
+The Vokiri app bypasses the upstream transcription pipeline entirely; its explicit final-output mode uses a separate tested workflow from response to history to paste. Native CoreAudioRecorder, ShortcutMonitor/ShortcutRecorder, MiniRecorderPanel/RecorderStatusDisplay, KeychainService, and CursorPaster are reused. AppSidebar, DashboardHeroCard, AppTheme, AppCardBackground, AppScreenHeader and native controls come from upstream source. Modes and Dictionary link to Vokiri rather than applying local cleanup. Settings do not expose upstream model downloads, screen capture, or update controls.
 
 Upstream `LOCAL_BUILD` alone does not fully guard the v2.21 updater initializer. Our entry point never constructs it, and our own Info.plist has no Sparkle feed or signing key. Stock upstream binary updates therefore cannot replace this app.
 
@@ -85,10 +91,10 @@ Keep upstream separate from our development/default branch:
 ```sh
 git remote -v
 git fetch upstream --tags
-git switch hypnos-speech
+git switch vokiri
 git merge <reviewed-upstream-tag-or-commit>
 swift test
-./scripts/build-hypnos.sh
+./scripts/build-vokiri.sh
 ```
 
 Use a merge, preserving both histories; do not rename upstream source folders or broadly rebrand Swift symbols. Review changes to the two hooks, recorder/paste contracts, and generator assertions. Keep our app identity and final-output invariants. Do not push our branch to Beingpax/VoiceInk. Push only reviewed, credential-free source to `origin` (the personal public fork). The backend has no VoiceInk overlap and should merge independently.
@@ -97,4 +103,4 @@ Use a merge, preserving both histories; do not rename upstream source folders or
 
 Run `swift test` for multipart/auth, URLSession upload/errors, exact UTF-8 output through history and delivery, cancellation including late finals/paste delay, private failure retention, explicit retry, empty/malformed responses, and interrupted recovery. Backend checks live in [server/README.md](server/README.md). These are mock/unit checks and do not claim real microphone/hotkey/server/paste verification. See [VALIDATION.md](VALIDATION.md) for the actual results of this build.
 
-Quit Hypnos Speech and remove only `~/Applications/Hypnos Speech.app` to uninstall. The recordings and Keychain item remain for recovery. Remove the key through Settings and revoke the Mac key in the server UI if retiring the device. Restore an older built Hypnos app or revert our commits and rebuild for rollback. Handy, VoiceInk, and their preferences/Keychain/data are independent.
+Quit Vokiri and remove only `~/Applications/Vokiri.app` to uninstall. The recordings and Keychain item remain for recovery. Remove the key through Settings and revoke the Mac key in the server UI if retiring the device. Restore an older built Vokiri app or revert our commits and rebuild for rollback. Handy, VoiceInk, and their preferences/Keychain/data are independent.

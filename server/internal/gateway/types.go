@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"hypnos.local/speech/internal/auth"
+	"github.com/iamtushar324/vokiri/server/internal/auth"
 )
 
 const version = "0.1.3"

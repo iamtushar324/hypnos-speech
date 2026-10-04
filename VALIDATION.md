@@ -1,27 +1,19 @@
-# Validation — 2026-10-04
+# Vokiri validation — 2026-10-04
 
-Base: VoiceInk v2.21, `640b0c8c36ee74d9e76d930f40e2c04bb739b4b3`.
+## Mac rebrand
 
-- Mac: Apple Silicon arm64, macOS 26.5.2; Xcode 26.3; Command Line Tools installed. Tailscale and Hypnos were reachable during the earlier build checks; see the final connectivity check below.
-- Capture-only Release app builds successfully. Installed at `~/Applications/Hypnos Speech.app` (4.2 MB), signed with the available Apple Development certificate; strict bundle signature verification passed. Bundle identifier is `space.hypnos.speech.mac`. Linked dependencies contain system frameworks and static Swift Atomics, with no local inference or Sparkle updater.
-- Restored VoiceInk's actual sidebar, window geometry, dashboard hero, native theme and controls. App launch/process and Dashboard screenshot reviewed through native UI automation. The on-screen Start Recording action correctly showed the Accessibility blocker before the permission was repaired. Added visible recording/processing/feedback states and a microphone-only test without a server key.
-- Actual microphone-only test passed using the app's native recorder: **82,880 frames at 16,000 Hz** (about 5.18 seconds), nonzero input meter peak. The fresh WAV stayed in private local Validation storage; **no server upload**. This proves local capture, not live transcription or paste.
-- `swift test`: **12 tests passed**, including multipart/bearer authentication, approved-field boundaries, real URLSession with mock transport, exact UTF-8 preservation through history/paste callback, late-response cancellation, cancellation during paste delay, failed-audio retention, explicit retry, invalid/empty responses, private storage/interrupted recovery, and permission/key/hotkey setup blockers. These are mock/unit tests.
-- Backend `go test -race ./...`, `go vet ./...`, and static build passed on both this Mac and Hypnos Linux amd64. JavaScript syntax check passed on this Mac. Hypnos checkout: `/srv/hypnos/personal/projects/hypnos-speech`; binary: `build/speechd` within that checkout. Task-local Go 1.26.3 archive was verified against the official published SHA-256.
-- Existing canonical gateway health returns `{"ok":true}`; unauthenticated `POST /v1/audio/transcriptions` returns HTTP 401. The user configured a dedicated device key directly in the app and performed fresh live dictation. No historical recording was uploaded for validation. The existing production deployment and encrypted settings/state are unchanged; the public repository's backend was built, not deployed over production.
-- Source/commit secret scanning passed before publication. The import excludes all private backend history, deployment files, runtime credentials/state/audio, personal dictionary and cleanup prompt. Local validation audio and reports are outside this repository.
-- At the last readiness check: Microphone **granted**, Accessibility **granted**, device key **configured**, global hotkey **installed**, app **idle**. The shortcut counter increased after the permission repair. The user confirmed live dictation was working. One saved completed server response matched the user's posted dictation reply **byte for byte in UTF-8**; the transcript itself is not published. This confirms that live response reached the conversation unchanged for that sample, without claiming a separate disposable-document fixture comparison.
+- Swift core suite: **12 tests passed**, including exact final text, request boundaries, cancellation, retry, and retained recording recovery.
+- `scripts/prepare-vokiri-project.py` contract assertions and Release build passed with Xcode 26.3. The target compiles 37 selected Swift sources and Swift Atomics 1.3.0.
+- `Vokiri.app` version 0.2.0 built, signed, verified and installed. Its designated signing requirement matches the previously installed Hypnos Speech app.
+- Native dashboard inspected: Vokiri title, menu, dashboard, and About label are present. Readiness confirms existing Microphone/Accessibility grants, saved Keychain device key and installed hotkey. The existing shortcut was preserved.
+- Every existing recording/audio metadata file matched its pre-install SHA-256. The previous app bundle is retained by the installer for rollback.
+- No fresh live transcription or microphone recording was performed as part of this rename. The core tests use synthetic data; readiness is not a claim of end-to-end dictation.
 
-## Accessibility repair and update installation
+## Server source
 
-System Settings initially displayed Hypnos Speech's Accessibility switch **on**, while the process trust API returned false. The macOS TCC log explicitly reported **“Failed to match existing code requirement”**: the stored grant pinned the earlier ad-hoc build's code hash, while the installed app used a developer certificate. Refreshing the entry for the installed signed app repaired the grant. Updated UI explains this mismatch instead of claiming the switch is off.
+- `go test -race ./...`, `go vet ./...`, JavaScript syntax check, and static `vokirid` build passed.
+- The Go module is `github.com/iamtushar324/vokiri/server`. Web branding, service metadata and binary use Vokiri.
+- Existing state/audio encryption AAD, serialized formats, device key handling, environment variables and API routes are unchanged.
+- Initial server import differences were reviewed: the public source intentionally excludes the private owner default, personal prompt and private operational data.
 
-The build script now retains the selected signing identity, supports build-only/install-only, and refuses to overwrite a running app. Build-only succeeded, installation while the app was running was refused, and installation after quitting succeeded. The complete staged bundle replaced the closed installation with a recoverable prior bundle. Strict signature checks passed, and the developer signing requirement remained identical across that update.
-
-## Validation limits
-
-The full **Run Local Validation** diagnostic was attempted during the Accessibility grant refresh. Fresh microphone capture passed, but its synthetic global-hotkey, exact native paste, and native paste-cancellation checks reported **FAIL**. No passing repeat of that full diagnostic was observed after the grant was restored. The user subsequently confirmed normal dictation was working; this does not convert the failed fixture checks into passes.
-
-Multiline Markdown/code/Unicode preservation and cancellation are covered by passing unit/mock tests. A separate native fixture comparison and native cancellation check remain unverified after the repair. **Run Local Validation** can repeat those checks in its disposable text document without a server upload; its private report is `~/Library/Application Support/space.hypnos.speech.mac/Validation/latest.json`. No further key entry or permission grant is pending at the recorded readiness check.
-
-At the final publication check, the existing Tailscale connection was refreshed and reported **Running**, but Hypnos was listed **offline**. The gateway health check and SSH timed out. The public maintenance fix was pushed successfully; updating the source checkout on Hypnos could not complete. That checkout's last verified revision was `758ab38`. The earlier successful live dictation does not establish current gateway availability; remote dictation requires Hypnos to become reachable again.
+Historical, pre-rebrand results and limitations are preserved in [the earlier validation record](docs/history/2026-10-03-hypnos-validation.md).

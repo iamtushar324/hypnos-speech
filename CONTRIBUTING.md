@@ -1,3 +1,7 @@
+# Contributing to Vokiri
+
+Vokiri client changes belong in `apps/`, shared gateway changes in `server/`. Read [AGENTS.md](AGENTS.md) and [VOKIRI.md](VOKIRI.md) before making changes. The upstream contribution guidance is preserved below; submit Vokiri changes to [this repository](https://github.com/iamtushar324/vokiri).
+
 # Contributing to VoiceInk
 
 First off, thank you for considering contributing to VoiceInk! It's people like you that make VoiceInk such a great tool.

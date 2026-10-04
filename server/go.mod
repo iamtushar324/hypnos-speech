@@ -1,4 +1,4 @@
-module hypnos.local/speech
+module github.com/iamtushar324/vokiri/server
 
 go 1.26.0
 

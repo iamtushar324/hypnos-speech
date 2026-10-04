@@ -240,7 +240,7 @@ function renderAuth(error = '') {
   const mount = el('div', { class: 'clerk-mount', id: 'clerk-sign-in' });
   const panel = el('main', { class: 'auth-page' },
     el('section', { class: 'auth-panel' },
-      el('div', { class: 'auth-brand' }, waveMark(), el('span', {}, 'Hypnos Speech')),
+      el('div', { class: 'auth-brand' }, waveMark(), el('span', {}, 'Vokiri')),
       el('h1', {}, 'Your voice, composed.'),
       el('p', {}, 'A private speech workspace for transcription, voices, and the words that make them yours.'),
       error ? el('div', { class: 'auth-error', role: 'alert' }, error) : mount),
@@ -282,7 +282,7 @@ async function boot() {
     await navigate(state.route, false);
   } catch (error) {
     if (state.clerk && !state.clerk.user) renderAuth();
-    else renderAuth(error.message || 'Hypnos Speech could not start.');
+    else renderAuth(error.message || 'Vokiri could not start.');
   }
 }
 
@@ -293,7 +293,7 @@ function navButton([id, label, iconName]) {
 function renderShell() {
   const shell = el('div', { class: 'shell', id: 'shell' },
     el('aside', { class: 'sidebar' },
-      el('div', { class: 'sidebar-head' }, waveMark(), el('span', {}, 'Hypnos Speech')),
+      el('div', { class: 'sidebar-head' }, waveMark(), el('span', {}, 'Vokiri')),
       el('p', { class: 'sidebar-section' }, 'Workspace'),
       el('nav', { class: 'nav', 'aria-label': 'Main navigation', id: 'main-nav' }, routes.slice(0, 6).map(navButton)),
       el('p', { class: 'sidebar-section' }, 'System'),
@@ -509,9 +509,9 @@ async function playHistoryAudio(item) {
 function cleanupStatusMeta(status) {
   return ({
     applied: ['Applied', 'good', 'OpenRouter used your cleanup prompt and dictionary context to produce the final transcript.'],
-    fallback: ['Fallback', 'warn', 'Cleanup was unavailable, so Hypnos applied the exact dictionary replacement rules instead.'],
+    fallback: ['Fallback', 'warn', 'Cleanup was unavailable, so Vokiri applied the exact dictionary replacement rules instead.'],
     skipped_snippet: ['Snippet', 'info', 'Cleanup was skipped because an exact snippet expansion produced the final text.'],
-    off: ['Off', '', 'Sentence cleanup was off, so Hypnos used the exact dictionary replacement rules.'],
+    off: ['Off', '', 'Sentence cleanup was off, so Vokiri used the exact dictionary replacement rules.'],
   })[status] || [titleCase(status || 'off'), '', 'No cleanup details were recorded.'];
 }
 
@@ -963,7 +963,7 @@ function renderTTSStudio() {
   const profile = defaultStudioProfile();
   const wantedModel = profile?.tts_model || state.settings?.default_tts_model;
   const defaultModel = configuredModels('tts').some((m) => m.id === wantedModel) ? wantedModel : configuredModels('tts')[0]?.id || '';
-  const text = el('textarea', { class: 'tts-input', id: 'tts-input', maxlength: 4000, placeholder: 'Write what Hypnos should say…', on: { input: (e) => { document.getElementById('tts-count').textContent = `${formatNumber(e.target.value.length)} / 4,000`; } } });
+  const text = el('textarea', { class: 'tts-input', id: 'tts-input', maxlength: 4000, placeholder: 'Write what Vokiri should say…', on: { input: (e) => { document.getElementById('tts-count').textContent = `${formatNumber(e.target.value.length)} / 4,000`; } } });
   let voice = voiceSelect(profile?.voice || state.settings?.default_voice || 'troy', defaultModel);
   const ttsModel = modelSelect('tts', 'tts-model', defaultModel);
   ttsModel.addEventListener('change', () => {
@@ -1026,7 +1026,7 @@ async function generateSpeech(event) {
     state.audioURL = URL.createObjectURL(blob);
     const audio = el('audio', { controls: true, src: state.audioURL, autoplay: true });
     document.getElementById('audio-result').replaceChildren(el('div', { class: 'audio-orb' }, icon('play')), el('strong', {}, 'Your voice is ready'), audio);
-    document.getElementById('audio-actions').replaceChildren(button('Download', { small: true, icon: 'download', onClick: () => downloadBlob(state.audioURL, `hypnos-speech-${Date.now()}.wav`) }));
+    document.getElementById('audio-actions').replaceChildren(button('Download', { small: true, icon: 'download', onClick: () => downloadBlob(state.audioURL, `vokiri-${Date.now()}.wav`) }));
     const meta = document.getElementById('audio-meta');
     meta.hidden = false;
     meta.replaceChildren(el('span', {}, shortModel(document.getElementById('tts-model').value)), el('span', {}, document.getElementById('tts-voice').selectedOptions[0]?.textContent || ''), response.headers.get('X-Speech-Latency-Ms') ? el('span', {}, `${response.headers.get('X-Speech-Latency-Ms')} ms`) : null);
@@ -1229,7 +1229,7 @@ function providerCard(provider) {
       el('input', { type: 'hidden', name: 'batch_deployment', value: provider.batch_deployment || '' }));
   } else if (openrouter) {
     fields.append(
-      field('API endpoint', el('input', { class: 'input', value: 'https://openrouter.ai/api/v1', readOnly: true, 'aria-readonly': 'true' }), 'OpenRouter API endpoint is managed by Hypnos.', true),
+      field('API endpoint', el('input', { class: 'input', value: 'https://openrouter.ai/api/v1', readOnly: true, 'aria-readonly': 'true' }), 'OpenRouter API endpoint is managed by Vokiri.', true),
       el('input', { type: 'hidden', name: 'endpoint', value: 'https://openrouter.ai/api/v1' }));
   } else {
     fields.append(field('API endpoint', textInput('endpoint', provider.endpoint || 'https://api.groq.com/openai/v1', 'https://api.groq.com/openai/v1'), 'Groq OpenAI-compatible API base URL.', true));
@@ -1440,7 +1440,7 @@ function dictionSetupCard() {
     el('div', { class: 'diction-intro' },
       el('span', { class: 'diction-app-icon', 'aria-hidden': 'true' }, 'D'),
       el('div', {}, el('p', { class: 'eyebrow' }, 'iPhone capture'), el('h2', {}, 'Connect Diction'),
-        el('p', {}, 'Use the Diction keyboard anywhere on your iPhone, with speech routed privately through Hypnos.')),
+        el('p', {}, 'Use the Diction keyboard anywhere on your iPhone, with speech routed privately through Vokiri.')),
       button('Create iPhone key', { kind: 'accent', icon: 'phone', disabled: !endpoint, onClick: () => openKeyModal('Tushar’s iPhone') })),
     el('div', { class: 'diction-body' },
       el('div', { class: 'diction-steps' },
@@ -1452,7 +1452,7 @@ function dictionSetupCard() {
         el('div', { class: 'keyboard-note' }, icon('phone'), el('div', {}, el('strong', {}, 'Add the keyboard'),
           el('p', {}, 'iOS Settings → General → Keyboard → Keyboards → Add New Keyboard → Diction. Then allow Full Access and microphone access.'))),
         el('div', { class: 'keyboard-note' }, icon('activity'), el('div', {}, el('strong', {}, 'Sentence cleanup'),
-          el('p', {}, 'Keep AI editing off in Diction. Hypnos applies the cleanup prompt and dictionary context configured here.'))))));
+          el('p', {}, 'Keep AI editing off in Diction. Vokiri applies the cleanup prompt and dictionary context configured here.'))))));
 }
 
 function setupStep(number, title, copy, iconName) {

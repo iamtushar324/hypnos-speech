@@ -28,13 +28,13 @@ func (s *Server) DictionHandler() http.Handler {
 				methodNotAllowed(w)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]any{"service": "Hypnos Speech for Diction", "endpoint": s.cfg.DictionPublicURL, "health": "/health", "models": "/v1/models", "pairing_required": true})
+			writeJSON(w, http.StatusOK, map[string]any{"service": "Vokiri for Diction", "endpoint": s.cfg.DictionPublicURL, "health": "/health", "models": "/v1/models", "pairing_required": true})
 		case "/health":
 			if r.Method != http.MethodGet && r.Method != http.MethodHead {
 				methodNotAllowed(w)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "version": "hypnos-speech/" + version})
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "version": "vokiri/" + version})
 		case "/v1/models":
 			if r.Method != http.MethodGet {
 				methodNotAllowed(w)

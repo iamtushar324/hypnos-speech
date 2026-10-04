@@ -1,23 +1,23 @@
 import Foundation
 
-/// The Hypnos final-output mode deliberately never enters VoiceInk's formatting/enhancement pipeline.
+/// The Vokiri final-output mode deliberately never enters VoiceInk's formatting/enhancement pipeline.
 @MainActor
-final class HypnosWorkflow {
+final class VokiriWorkflow {
     enum State: Equatable { case idle, processing, success, failed(String), canceled }
     private(set) var state: State = .idle { didSet { onChange?() } }
     var onChange: (() -> Void)?
-    let store: HypnosStore
-    private let client: HypnosTranscribing
+    let store: VokiriStore
+    private let client: VokiriTranscribing
     private var task: Task<Void, Never>?
     private var generation = UUID()
     var isBusy: Bool { task != nil }
 
-    init(store: HypnosStore, client: HypnosTranscribing = HypnosClient()) {
+    init(store: VokiriStore, client: VokiriTranscribing = VokiriClient()) {
         self.store = store
         self.client = client
     }
 
-    func submit(_ record: HypnosRecording, configuration: HypnosConfiguration, key: String,
+    func submit(_ record: VokiriRecording, configuration: VokiriConfiguration, key: String,
                 paste: @escaping @MainActor (String, @escaping @MainActor () -> Bool) async -> Bool) {
         guard task == nil else { return }
         let current = UUID()
@@ -37,7 +37,7 @@ final class HypnosWorkflow {
                 try store.save(updated)
                 let didPaste = await paste(text, { [weak self] in self?.generation != current })
                 guard generation == current, !Task.isCancelled else { throw CancellationError() }
-                state = didPaste ? .success : .failed(HypnosError.paste.localizedDescription)
+                state = didPaste ? .success : .failed(VokiriError.paste.localizedDescription)
             } catch {
                 if generation != current || Task.isCancelled || error is CancellationError {
                     // A completed result stays available when cancellation happened during paste delay.
@@ -45,11 +45,11 @@ final class HypnosWorkflow {
                     updated.error = "Canceled. Processing may have occurred; no automatic retry."
                 } else {
                     updated.status = .failed
-                    updated.error = (error as? HypnosError)?.localizedDescription ?? "Transcription failed. The recording is retained."
+                    updated.error = (error as? VokiriError)?.localizedDescription ?? "Transcription failed. The recording is retained."
                     state = .failed(updated.error!)
                 }
                 do { try store.save(updated) }
-                catch { if generation == current { state = .failed(HypnosError.storage.localizedDescription) } }
+                catch { if generation == current { state = .failed(VokiriError.storage.localizedDescription) } }
             }
             if generation == current { task = nil }
             onChange?()
